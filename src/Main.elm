@@ -1,8 +1,8 @@
-
 import Browser
 import Browser.Events
 import Html exposing (Html)
 import Time exposing (Posix)
+import Random
 
 import Collage exposing (..)
 import Collage.Layout as Layout
@@ -11,88 +11,82 @@ import Collage.Render exposing (svg)
 import Color
 import Animation as A
 
+import Snowflake
+
+
+-- INIT
+
 main = Browser.element
     { init = init
-    , update = \msg model -> ( update msg model, Cmd.none )
+    , update = update
     , view = view
-    , subscriptions = (\m -> Browser.Events.onAnimationFrameDelta Tick)
+    , subscriptions = subscriptions
     } 
-
-type alias Model =
-  { clock : A.Clock
-  , snowflakeYs : List A.Animation
-  }
-
-second : Float
-second =
-    1000
 
 model0 =
     Model 0
-        (List.range 0 10 |> List.map (\t -> t * 500 |> toFloat) |> List.map snowflakeRowAnimation)
-
-type Msg
-    = Tick Float
+        []
+        (0, 0)
 
 init : () -> (Model, Cmd Msg)
 init _ =
   (model0 , Cmd.none)
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ Browser.Events.onAnimationFrameDelta Tick
+        , Time.every 10 NewSnowflake
+        ]
 
-update : Msg -> Model -> Model
+
+-- TYPES
+
+type alias Model =
+  { clock : A.Clock
+  , snowflakePositions : List Snowflake.Position
+  , randomness : ( Float, Float )
+  }
+
+type Msg
+    = Tick Float
+    | NewRandom (Float, Float)
+    | NewSnowflake Posix
+
+
+-- UPDATE
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Tick time ->
+            ( { model | clock = model.clock + time }, Cmd.none)
+        
+        NewRandom (x, y) ->
+            ( { model | randomness = (x, y) }, Cmd.none )
+        
+        NewSnowflake clock ->
             let
-                clock = model.clock + time
-                animations = model.snowflakeYs |> List.map (loop clock)
+                position = Snowflake.initPosition model.clock model.randomness
             in
-                { model | clock = clock, snowflakeYs = animations }
+               ({ model | snowflakePositions = position :: (List.take 150 model.snowflakePositions) }
+               , Random.generate NewRandom (Random.pair (Random.float 0 1) (Random.float 0 1))
+               )
 
 
-loop : A.Clock -> A.Animation -> A.Animation
-loop t a = if A.isDone t a then snowflakeRowAnimation t else a
-
-
-snowflakeRowAnimation : A.Clock -> A.Animation
-snowflakeRowAnimation startTime =
-    A.animation startTime |> A.duration 5000 |> A.from 0 |> A.to -1000
-
-
-snowflakeRows : List A.Animation -> A.Clock -> Collage msg
-snowflakeRows animations time =
-    let
-        snowflake =
-            [ 45, 90, 135, 180 ]
-            |> List.map (\d -> line 10 |> traced (solid thin (uniform Color.white)) |> rotate d)
-            |> group
-
-        row =
-            List.repeat 10 snowflake
-                |> List.intersperse (Layout.spacer 100 0)
-                |> Layout.horizontal
-                |> Layout.align Layout.base
-
-        rows = List.map (\animation -> row |> shiftY (A.animate time animation)) animations
-    in
-        group rows
-    
-
+-- VIEW
 
 view : Model -> Html msg
 view model =
-    let
-        ground =
-            Collage.ellipse 700 100
-                |> filled (uniform Color.darkGreen)
-                |> Layout.align Layout.base
-
-        sky =
-            rectangle 1000 1000
-                |> filled (uniform Color.lightBlue)
-                |> Layout.at Layout.top (snowflakeRows model.snowflakeYs model.clock)
-                |> Layout.align Layout.bottom
-        
-    in
-        Layout.impose ground sky
+    rectangle 1000 1000
+        |> filled (uniform Color.lightBlue)
+        |> Layout.at Layout.topLeft (snowflakes model)
+        |> Layout.align Layout.bottom
         |> svg
+
+
+snowflakes : Model -> Collage msg
+snowflakes model =
+    model.snowflakePositions
+        |> List.map (\p -> Snowflake.snowflake |> Snowflake.animatePosition p model.clock)
+        |> group 
