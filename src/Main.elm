@@ -24,7 +24,7 @@ main = Browser.element
     , update = update
     , view = view
     , subscriptions = subscriptions
-    } 
+    }
 
 model0 =
     Model 0
@@ -32,10 +32,11 @@ model0 =
         (0, 0)
         0
         0
+        Unstarted
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  (model0 , Cmd.none)
+  (model0, Cmd.none)
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -53,6 +54,7 @@ type alias Model =
   , randomness : ( Float, Float )
   , playerX : Float
   , score : Int
+  , state : GameState
   }
 
 type Msg
@@ -60,7 +62,12 @@ type Msg
     | NewRandom (Float, Float)
     | NewSnowflake Posix
     | MouseMove Point
+    | StartGame
 
+type GameState
+    = Unstarted
+    | Playing Float
+    | Won Int
 
 -- UPDATE
 
@@ -68,14 +75,27 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Tick time ->
-            let
-                (caught, uncaught) = List.partition (isFlakeCaught model) model.snowflakePositions
-            in
-                ( { model | clock = model.clock + time, score = model.score + List.length caught, snowflakePositions = uncaught }, Cmd.none)
-        
+            case model.state of
+                Playing startTime ->
+                    let
+                        (caught, uncaught) = List.partition (isFlakeCaught model) model.snowflakePositions
+                        newScore = model.score + List.length caught
+                        clock = model.clock + time
+                        won = compare (clock - startTime) (config.gameLengthSeconds * 1000) == GT
+                    in
+                        ( { model
+                            | clock = clock
+                            , score = newScore
+                            , snowflakePositions = uncaught
+                            , state = if won then Won newScore else model.state
+                        }, Cmd.none)
+
+                _ ->
+                    ({ model | clock = model.clock + time }, Cmd.none )
+
         NewRandom (x, y) ->
             ( { model | randomness = (x, y) }, Cmd.none )
-        
+
         NewSnowflake clock ->
             let
                 position = Snowflake.initPosition model.clock model.randomness
@@ -83,9 +103,18 @@ update msg model =
                ({ model | snowflakePositions = position :: (List.take config.maxSnowflakes model.snowflakePositions) }
                , Random.generate NewRandom (Random.pair (Random.float 0 1) (Random.float 0 1))
                )
-        
+
         MouseMove point ->
-            ( { model | playerX = Tuple.first point }, Cmd.none )
+            case model.state of
+                Playing startTime ->
+                    ( { model | playerX = Tuple.first point }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        StartGame ->
+            ( { model | state = Playing model.clock, score = 0 }, Cmd.none)
+
 
 
 isFlakeCaught : Model -> Snowflake.Position -> Bool
@@ -103,63 +132,120 @@ isFlakeCaught model flakePosition =
 
 view : Model -> Html Msg
 view model =
-    rectangle config.sceneWidth config.sceneHeight
-        |> filled (uniform Color.lightBlue)
---        |> Layout.align Layout.base |> Layout.impose happyHolidays
-        |> Layout.align Layout.topRight |> Layout.impose (score model.score |> shift (-50, -50))
+    Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
+        |> Layout.align Layout.base
+        |> Layout.at Layout.base (message model.state)
+        |> Layout.at Layout.topRight (score model |> shift (-50, -50))
+        |> Layout.at Layout.topLeft (countdown model |> shift (50, -50))
         |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
-        |> Layout.align Layout.bottomRight |> Layout.impose (tree |> shiftX -100)
-        --|> Layout.align Layout.bottomLeft |> Layout.impose (snowman |> shiftX 100 |> shiftY 50 |> scale 0.8)
-        |> Layout.align Layout.topLeft |> Layout.impose (snowflakes model)
         |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
         |> Events.onMouseMove MouseMove
         |> svg
 
+background =
+    rectangle config.sceneWidth config.sceneHeight
+        |> filled (uniform Color.lightBlue)
 
 snowflakes : Model -> Collage msg
 snowflakes model =
     model.snowflakePositions
         |> List.map (Snowflake.animatePosition model.clock)
         |> List.map (\p -> Snowflake.snowflake |> shiftX p.x |> shiftY p.y |> rotate p.rotation)
-        |> group 
+        |> group
 
 snowdrifts : Collage msg
 snowdrifts =
     [ ellipse 150 30
     , ellipse 140 50
-    , ellipse 200 70
+    , ellipse 200 40
     , ellipse 150 50
-    , ellipse 150 60
+    , ellipse 150 40
     , ellipse 150 30
     ]
-    |> List.map (filled (uniform Color.white))
+    |> List.map (filled (uniform Color.grey))
     |> List.indexedMap (\i e -> shiftX ((toFloat i) * 200) e)
     |> group
 
 
-happyHolidays : Collage msg
+customStyle =
+    Text.style
+        { color = Color.white
+        , typeface = (Text.Font "Hobo Std")
+        , size = 100
+        , shape = Text.Upright
+        , weight = Text.Regular
+        , line = Text.None
+        }
+
+
+message : GameState -> Collage Msg
+message state =
+    case state of
+        Unstarted ->
+            happyHolidays
+
+        Playing startTime ->
+            Text.empty |> rendered
+
+        Won points ->
+            youWon points
+
+
+happyHolidays : Collage Msg
 happyHolidays =
-    Text.fromString "Happy Holidays"
-        |> Text.size 100
-        |> Text.typeface (Text.Font "Hobo Std")
+    [ Text.fromString "Happy Holidays"
+        |> customStyle
         |> rendered
-
-
-score : Int -> Collage msg
-score points =
-    Text.fromString (String.fromInt points)
-        |> Text.size 50
-        |> Text.typeface (Text.Font "Hobo Std")
-        |> Text.color Color.white
+    , Text.fromString "Click to catch some flakes"
+        |> customStyle
+        |> Text.size 30
         |> rendered
+    ] |> Layout.vertical
+    |> Events.onClick StartGame
 
 
-tree : Collage msg
-tree =
-    rectangle 30 300
-        |> filled (uniform Color.darkBrown)
-        |> Layout.at Layout.top (triangle 150 |> filled (uniform Color.darkGreen) |> scaleY 1.5 |> shiftY 20)
-        |> Layout.at Layout.bottom (present |> shiftY 190 |> scale 0.6 |> shiftX 40)
+youWon : Int -> Collage Msg
+youWon points =
+    [ Text.fromString "Nice!"
+        |> customStyle
+        |> rendered
+    , Text.fromString ("You caught " ++ (String.fromInt points) ++ " flakes")
+        |> customStyle
+        |> Text.size 30
+        |> rendered
+    , Layout.spacer 0 10
+    , Text.fromString "Click to play again"
+        |> customStyle
+        |> Text.size 30
+        |> rendered
+    ] |> Layout.vertical
+    |> Events.onClick StartGame
+
+
+score : Model -> Collage Msg
+score model =
+    case model.state of
+        Playing _ ->
+            Text.fromString (String.fromInt model.score)
+                |> customStyle
+                |> Text.size 50
+                |> rendered
+
+        option2 ->
+            Text.empty |> rendered
+
+
+countdown : Model -> Collage Msg
+countdown model =
+    case model.state of
+        Playing startTime ->
+            Text.fromString (String.fromInt <| round <| (config.gameLengthSeconds - (model.clock - startTime) / 1000))
+                |> customStyle
+                |> Text.size 50
+                |> rendered
+
+        _ ->
+            Text.empty |> rendered
 
 
 headRadius : Int -> Float
@@ -170,7 +256,7 @@ headRadius currentScore =
 snowman : Int -> Collage msg
 snowman currentScore =
     let
-        whiteCircle size = circle size |> (filled (uniform Color.white))  
+        whiteCircle size = circle size |> (filled (uniform Color.white))
         nose = triangle 20
             |> (filled (uniform Color.orange))
             |> rotate (degrees 30)
@@ -186,14 +272,3 @@ snowman currentScore =
     ]
     |> List.indexedMap (\i e -> shiftY ((toFloat i) * 90) e)
     |> group
-
-
-present : Collage msg
-present =
-    let
-        bow = [45, 90, 135] |> List.map (\d -> ellipse 20 10 |> filled (uniform Color.darkYellow) |> rotate (degrees d)) |> group
-    in
-        roundedRectangle 70 50 5
-            |> filled (uniform Color.darkRed)
-            |> Layout.impose (rectangle 10 50 |> filled (uniform Color.darkYellow))
-            |> Layout.at Layout.top bow
