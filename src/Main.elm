@@ -23,10 +23,10 @@ import Config exposing (config)
 
 -- INIT
 
-main = Browser.element
+main = Browser.document
     { init = init
     , update = update
-    , view = view
+    , view = (\m -> { title = "The Hungry Snowman", body = view m })
     , subscriptions = subscriptions
     }
 
@@ -178,19 +178,19 @@ isFlakeCaught model flakePosition =
 
 -- VIEW
 
-view : Model -> Html Msg
+view : Model -> List (Html Msg)
 view model =
-    Html.div []
-        [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href ("https://fonts.googleapis.com/css?family=" ++ config.font)] []
-        , Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
-            |> Layout.align Layout.base
-            |> Layout.at Layout.base (message model)
-            |> Layout.at Layout.topLeft (score model |> shift (50, -50))
-            |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
-            |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
-            |> Events.onMouseMove MouseMove
-            |> svg
-        ]
+    [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href ("https://fonts.googleapis.com/css?family=" ++ config.font)] []
+    , Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
+        |> Layout.align Layout.base
+        |> Layout.at Layout.base (message model)
+        |> Layout.at Layout.topLeft (score model |> shift (50, -50))
+        |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
+        |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
+        |> Layout.align Layout.bottomRight |> Layout.impose (html (820, 40) info)
+        |> Events.onMouseMove MouseMove
+        |> svg
+    ]
 
 background =
     rectangle config.sceneWidth config.sceneHeight
@@ -267,7 +267,7 @@ youWon points totalFlakes =
     , Layout.spacer 0 10
     , case totalFlakes of
         Just flakes ->
-            Text.fromString ("The hungry snowman has caught " ++ (String.fromInt (flakes + points)) ++ " flakes")
+            Text.fromString ("The Hungry Snowman has caught " ++ (String.fromInt (flakes + points)) ++ " flakes")
                 |> customStyle
                 |> Text.size 30
                 |> rendered
@@ -336,3 +336,15 @@ snowman currentScore =
     ]
     |> List.indexedMap (\i e -> shiftY ((toFloat i) * 90) e)
     |> group
+
+
+info : Html Msg
+info =
+    Html.a
+        [ Html.Attributes.href "https://www.nature.org/"
+        , Html.Attributes.target "_blank"
+        , Html.Attributes.style "color" "grey"
+        , Html.Attributes.style "text-decoration" "none"
+        , Html.Attributes.style "font-family" "sans-serif"
+        , Html.Attributes.style "font-size" "12px"
+        ]  [ Html.text "Like The Hungry Snowman? Consider donating to The Nature Conservancy." ]
