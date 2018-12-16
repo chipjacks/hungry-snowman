@@ -4,6 +4,8 @@ import Collage exposing (..)
 import Animation as A
 import Color
 
+import Config exposing (config)
+
 type alias Position =
     { x : A.Animation
     , y : A.Animation
@@ -17,8 +19,8 @@ snowflake =
 
 initPosition : A.Clock -> (Float, Float) -> Position
 initPosition startTime (xRand, yRand) =
-    { y = A.animation startTime |> A.duration (yRand * 5000 + 3000) |> A.from 5 |> A.to -995
-    , x = A.static (990 * xRand + 5) 
+    { y = A.animation startTime |> A.duration (yRand * 5000 + 10000) |> A.from 5 |> A.to (0 - config.sceneHeight + 5)
+    , x = A.static (5 + (config.sceneWidth - 10) * xRand)
     }
 
 animatePosition : Position -> A.Clock -> Collage msg -> Collage msg

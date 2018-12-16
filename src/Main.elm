@@ -12,6 +12,7 @@ import Color
 import Animation as A
 
 import Snowflake
+import Config exposing (config)
 
 
 -- INIT
@@ -36,7 +37,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Browser.Events.onAnimationFrameDelta Tick
-        , Time.every 10 NewSnowflake
+        , Time.every config.snowflakeFrequency NewSnowflake
         ]
 
 
@@ -69,7 +70,7 @@ update msg model =
             let
                 position = Snowflake.initPosition model.clock model.randomness
             in
-               ({ model | snowflakePositions = position :: (List.take 150 model.snowflakePositions) }
+               ({ model | snowflakePositions = position :: (List.take config.maxSnowflakes model.snowflakePositions) }
                , Random.generate NewRandom (Random.pair (Random.float 0 1) (Random.float 0 1))
                )
 
@@ -78,10 +79,9 @@ update msg model =
 
 view : Model -> Html msg
 view model =
-    rectangle 1000 1000
+    rectangle config.sceneWidth config.sceneHeight
         |> filled (uniform Color.lightBlue)
         |> Layout.at Layout.topLeft (snowflakes model)
-        |> Layout.align Layout.bottom
         |> svg
 
 
