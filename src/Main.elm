@@ -169,7 +169,7 @@ snowdrifts =
 customStyle =
     Text.style
         { color = Color.white
-        , typeface = (Text.Font "Hobo Std")
+        , typeface = (Text.Font "cursive")
         , size = 100
         , shape = Text.Upright
         , weight = Text.Regular
@@ -195,6 +195,7 @@ happyHolidays =
     [ Text.fromString "Happy Holidays"
         |> customStyle
         |> rendered
+    , Layout.spacer 0 30
     , Text.fromString "Click to catch some flakes"
         |> customStyle
         |> Text.size 30
@@ -228,7 +229,6 @@ score model =
             [Text.fromString "⌛︎"
                 |> customStyle
                 |> Text.size 50
-                |> Text.typeface (Text.Font "Cambria")
                 |> rendered
             ,Text.fromString ((String.fromInt <| round <| (config.gameLengthSeconds - (model.clock - startTime) / 1000) ))
                 |> customStyle
