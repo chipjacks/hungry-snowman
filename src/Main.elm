@@ -4,6 +4,9 @@ import Html exposing (Html)
 import Html.Attributes
 import Time exposing (Posix)
 import Random
+import Http
+import Json.Encode as Encode
+import Json.Decode as Decode
 
 import Collage exposing (..)
 import Collage.Layout as Layout
@@ -33,6 +36,7 @@ model0 =
         (0, 0)
         0
         0
+        Nothing
         Unstarted
 
 init : () -> (Model, Cmd Msg)
@@ -55,6 +59,7 @@ type alias Model =
   , randomness : ( Float, Float )
   , playerX : Float
   , score : Int
+  , totalFlakes : Maybe Int
   , state : GameState
   }
 
@@ -64,6 +69,8 @@ type Msg
     | NewSnowflake Posix
     | MouseMove Point
     | StartGame
+    | LoadedFlakes (Result Http.Error Int)
+    | SavedFlakes (Result Http.Error ())
 
 type GameState
     = Unstarted
@@ -89,7 +96,7 @@ update msg model =
                             , score = newScore
                             , snowflakePositions = uncaught
                             , state = if won then Won newScore else model.state
-                        }, Cmd.none)
+                        }, if won then finishGame newScore model.totalFlakes else Cmd.none )
 
                 _ ->
                     ({ model | clock = model.clock + time }, Cmd.none )
@@ -114,8 +121,48 @@ update msg model =
                     ( model, Cmd.none )
 
         StartGame ->
-            ( { model | state = Playing model.clock, score = 0 }, Cmd.none)
+            ( { model | state = Playing model.clock, score = 0 }, loadFlakes)
 
+        LoadedFlakes result ->
+            case result of
+                Ok count ->
+                    ( { model | totalFlakes = Just count }, Cmd.none )
+
+                Err _ ->
+                    ( model, Cmd.none )
+
+        SavedFlakes _ ->
+            ( model, Cmd.none )
+
+
+finishGame : Int -> Maybe Int -> Cmd Msg
+finishGame newScore totalFlakes =
+    case (newScore, totalFlakes) of
+        (count, Just flakes) ->
+            saveFlakes (flakes + count)
+
+        _ ->
+            Cmd.none
+
+
+loadFlakes : Cmd Msg
+loadFlakes =
+  Http.get
+    { url = "https://api.jsonbin.io/b/5c16a811dbf79646d0fca78b/latest"
+    , expect = Http.expectJson LoadedFlakes (Decode.field "flakes" Decode.int)
+    }
+
+saveFlakes : Int -> Cmd Msg
+saveFlakes count =
+    Http.request
+        { method = "PUT"
+        , headers = []
+        , url = "https://api.jsonbin.io/b/5c16a811dbf79646d0fca78b"
+        , body = Http.jsonBody (Encode.object [("flakes", Encode.int count)])
+        , expect = Http.expectWhatever SavedFlakes
+        , timeout = Nothing
+        , tracker = Nothing
+        }
 
 
 isFlakeCaught : Model -> Snowflake.Position -> Bool
@@ -137,7 +184,7 @@ view model =
         [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href ("https://fonts.googleapis.com/css?family=" ++ config.font)] []
         , Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
             |> Layout.align Layout.base
-            |> Layout.at Layout.base (message model.state)
+            |> Layout.at Layout.base (message model)
             |> Layout.at Layout.topLeft (score model |> shift (50, -50))
             |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
             |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
@@ -181,9 +228,9 @@ customStyle =
         }
 
 
-message : GameState -> Collage Msg
-message state =
-    case state of
+message : Model -> Collage Msg
+message model =
+    case model.state of
         Unstarted ->
             happyHolidays
 
@@ -191,7 +238,7 @@ message state =
             Text.empty |> rendered
 
         Won points ->
-            youWon points
+            youWon points model.totalFlakes
 
 
 happyHolidays : Collage Msg
@@ -208,8 +255,8 @@ happyHolidays =
     |> Events.onClick StartGame
 
 
-youWon : Int -> Collage Msg
-youWon points =
+youWon : Int -> Maybe Int -> Collage Msg
+youWon points totalFlakes =
     [ Text.fromString "Nice!"
         |> customStyle
         |> rendered
@@ -217,6 +264,17 @@ youWon points =
         |> customStyle
         |> Text.size 30
         |> rendered
+    , Layout.spacer 0 10
+    , case totalFlakes of
+        Just flakes ->
+            Text.fromString ("The hungry snowman has caught " ++ (String.fromInt (flakes + points)) ++ " flakes")
+                |> customStyle
+                |> Text.size 30
+                |> rendered
+
+        Nothing ->
+            Layout.spacer 0 0
+
     , Layout.spacer 0 10
     , Text.fromString "Click to play again"
         |> customStyle
