@@ -121,7 +121,15 @@ update msg model =
                     ( model, Cmd.none )
 
         StartGame ->
-            ( { model | state = Playing model.clock, score = 0 }, loadFlakes)
+            case model.state of
+                Unstarted ->
+                    ( { model | state = Playing model.clock, score = 0 }, loadFlakes)
+
+                Won _ ->
+                    ( { model | state = Playing model.clock, score = 0 }, loadFlakes)
+
+                _ ->
+                    (model, Cmd.none)
 
         LoadedFlakes result ->
             case result of
@@ -187,8 +195,9 @@ view model =
         |> Layout.at Layout.topLeft (score model |> shift (50, -50))
         |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
         |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
-        |> Layout.align Layout.bottomRight |> Layout.impose (html (820, 40) info)
+--        |> Layout.align Layout.bottomRight |> Layout.impose (html (820, 40) info)
         |> Events.onMouseMove MouseMove
+        |> Events.onClick StartGame
         |> svg
     ]
 
@@ -252,7 +261,6 @@ happyHolidays =
         |> Text.size 30
         |> rendered
     ] |> Layout.vertical
-    |> Events.onClick StartGame
 
 
 youWon : Int -> Maybe Int -> Collage Msg
@@ -265,17 +273,16 @@ youWon points totalFlakes =
         |> Text.size 30
         |> rendered
     , Layout.spacer 0 10
-    , case totalFlakes of
-        Just flakes ->
-            Text.fromString ("The Hungry Snowman has caught " ++ (String.fromInt (flakes + points)) ++ " flakes")
-                |> customStyle
-                |> Text.size 30
-                |> rendered
+    -- , case totalFlakes of
+    --     Just flakes ->
+    --         Text.fromString ("The Hungry Snowman has caught " ++ (String.fromInt (flakes + points)) ++ " flakes")
+    --             |> customStyle
+    --             |> Text.size 30
+    --             |> rendered
 
-        Nothing ->
-            Layout.spacer 0 0
-
-    , Layout.spacer 0 10
+    --     Nothing ->
+    --         Layout.spacer 0 0
+    -- , Layout.spacer 0 10
     , Text.fromString "Click to play again"
         |> customStyle
         |> Text.size 30
