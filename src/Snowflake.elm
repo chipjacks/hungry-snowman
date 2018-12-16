@@ -28,6 +28,9 @@ initPosition startTime (xRand, yRand) =
         , rotation = A.animation startTime |> A.duration duration |> A.from 0 |> A.to 10
         }
 
-animatePosition : Position -> A.Clock -> Collage msg -> Collage msg
-animatePosition position clock flake =
-    flake |> shiftX (position.x |> A.animate clock) |> shiftY (position.y |> A.animate clock) |> rotate (position.rotation |> A.animate clock)
+animatePosition : A.Clock -> Position -> { x : Float, y : Float, rotation : Float }
+animatePosition clock position =
+    { x = (position.x |> A.animate clock)
+    , y = (position.y |> A.animate clock)
+    , rotation = (position.rotation |> A.animate clock)
+    }
