@@ -6394,7 +6394,7 @@ var author$project$Main$customStyle = timjs$elm_collage$Collage$Text$style(
 		line: timjs$elm_collage$Collage$Text$None,
 		shape: timjs$elm_collage$Collage$Text$Upright,
 		size: 100,
-		typeface: timjs$elm_collage$Collage$Text$Font('Hobo Std'),
+		typeface: timjs$elm_collage$Collage$Text$Font('cursive'),
 		weight: timjs$elm_collage$Collage$Text$Regular
 	});
 var timjs$elm_collage$Collage$Core$Text = F2(
@@ -6437,6 +6437,13 @@ var timjs$elm_collage$Collage$Events$simpleOn = function (event) {
 		elm$json$Json$Decode$succeed);
 };
 var timjs$elm_collage$Collage$Events$onClick = timjs$elm_collage$Collage$Events$simpleOn('click');
+var timjs$elm_collage$Collage$Layout$spacer = F2(
+	function (w, h) {
+		return A2(
+			timjs$elm_collage$Collage$styled,
+			_Utils_Tuple2(timjs$elm_collage$Collage$transparent, timjs$elm_collage$Collage$invisible),
+			A2(timjs$elm_collage$Collage$rectangle, w, h));
+	});
 var timjs$elm_collage$Collage$Layout$Down = {$: 'Down'};
 var timjs$elm_collage$Collage$shift = F2(
 	function (_n0, collage) {
@@ -6775,13 +6782,6 @@ var timjs$elm_collage$Collage$Layout$beside = F3(
 					A3(timjs$elm_collage$Collage$Layout$place, dir, a, b)
 				]));
 	});
-var timjs$elm_collage$Collage$Layout$spacer = F2(
-	function (w, h) {
-		return A2(
-			timjs$elm_collage$Collage$styled,
-			_Utils_Tuple2(timjs$elm_collage$Collage$transparent, timjs$elm_collage$Collage$invisible),
-			A2(timjs$elm_collage$Collage$rectangle, w, h));
-	});
 var timjs$elm_collage$Collage$Layout$empty = A2(timjs$elm_collage$Collage$Layout$spacer, 0, 0);
 var timjs$elm_collage$Collage$Layout$vertical = A2(
 	elm$core$List$foldr,
@@ -6811,6 +6811,7 @@ var author$project$Main$happyHolidays = A2(
 				timjs$elm_collage$Collage$rendered(
 				author$project$Main$customStyle(
 					timjs$elm_collage$Collage$Text$fromString('Happy Holidays'))),
+				A2(timjs$elm_collage$Collage$Layout$spacer, 0, 30),
 				timjs$elm_collage$Collage$rendered(
 				A2(
 					timjs$elm_collage$Collage$Text$size,
@@ -6862,17 +6863,6 @@ var timjs$elm_collage$Collage$Layout$horizontal = A2(
 	elm$core$List$foldr,
 	timjs$elm_collage$Collage$Layout$beside(timjs$elm_collage$Collage$Layout$Right),
 	timjs$elm_collage$Collage$Layout$empty);
-var timjs$elm_collage$Collage$Text$typeface = F2(
-	function (newface, _n0) {
-		var sty = _n0.a;
-		var str = _n0.b;
-		return A2(
-			timjs$elm_collage$Collage$Core$Chunk,
-			_Utils_update(
-				sty,
-				{typeface: newface}),
-			str);
-	});
 var author$project$Main$score = function (model) {
 	var _n0 = model.state;
 	if (_n0.$ === 'Playing') {
@@ -6882,13 +6872,10 @@ var author$project$Main$score = function (model) {
 				[
 					timjs$elm_collage$Collage$rendered(
 					A2(
-						timjs$elm_collage$Collage$Text$typeface,
-						timjs$elm_collage$Collage$Text$Font('Cambria'),
-						A2(
-							timjs$elm_collage$Collage$Text$size,
-							50,
-							author$project$Main$customStyle(
-								timjs$elm_collage$Collage$Text$fromString('⌛︎'))))),
+						timjs$elm_collage$Collage$Text$size,
+						50,
+						author$project$Main$customStyle(
+							timjs$elm_collage$Collage$Text$fromString('⌛︎')))),
 					timjs$elm_collage$Collage$rendered(
 					A2(
 						timjs$elm_collage$Collage$Text$size,
