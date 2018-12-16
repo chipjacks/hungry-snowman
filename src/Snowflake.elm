@@ -9,6 +9,7 @@ import Config exposing (config)
 type alias Position =
     { x : A.Animation
     , y : A.Animation
+    , rotation : A.Animation
     }
 
 snowflake : Collage msg
@@ -19,10 +20,14 @@ snowflake =
 
 initPosition : A.Clock -> (Float, Float) -> Position
 initPosition startTime (xRand, yRand) =
-    { y = A.animation startTime |> A.duration (yRand * 5000 + 10000) |> A.from 5 |> A.to (0 - config.sceneHeight + 5)
-    , x = A.static (5 + (config.sceneWidth - 10) * xRand)
-    }
+    let
+        duration = yRand * 5000 + 10000
+    in
+        { y = A.animation startTime |> A.duration duration |> A.from 5 |> A.to (0 - config.sceneHeight + 5)
+        , x = A.static (5 + (config.sceneWidth - 10) * xRand)
+        , rotation = A.animation startTime |> A.duration duration |> A.from 0 |> A.to 10
+        }
 
 animatePosition : Position -> A.Clock -> Collage msg -> Collage msg
 animatePosition position clock flake =
-    flake |> shiftX (position.x |> A.animate clock) |> shiftY (position.y |> A.animate clock)
+    flake |> shiftX (position.x |> A.animate clock) |> shiftY (position.y |> A.animate clock) |> rotate (position.rotation |> A.animate clock)

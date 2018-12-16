@@ -7,6 +7,7 @@ import Random
 import Collage exposing (..)
 import Collage.Layout as Layout
 import Collage.Render exposing (svg)
+import Collage.Text as Text
 
 import Color
 import Animation as A
@@ -81,7 +82,11 @@ view : Model -> Html msg
 view model =
     rectangle config.sceneWidth config.sceneHeight
         |> filled (uniform Color.lightBlue)
+        |> Layout.align Layout.base |> Layout.impose merryChristmas
+        |> Layout.align Layout.bottomRight |> Layout.impose (tree |> shiftX -100)
+        |> Layout.align Layout.bottomLeft |> Layout.impose (snowman |> shiftX 100 |> shiftY 50 |> scale 0.8)
         |> Layout.at Layout.topLeft (snowflakes model)
+        |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
         |> svg
 
 
@@ -90,3 +95,50 @@ snowflakes model =
     model.snowflakePositions
         |> List.map (\p -> Snowflake.snowflake |> Snowflake.animatePosition p model.clock)
         |> group 
+
+snowdrifts : Collage msg
+snowdrifts =
+    [ ellipse 150 30
+    , ellipse 140 50
+    , ellipse 200 70
+    , ellipse 150 50
+    , ellipse 150 60
+    , ellipse 150 30
+    ]
+    |> List.map (filled (uniform Color.white))
+    |> List.indexedMap (\i e -> shiftX ((toFloat i) * 200) e)
+    |> group
+
+
+merryChristmas : Collage msg
+merryChristmas =
+    Text.fromString "Merry Christmas"
+        |> Text.size 100
+        |> Text.typeface (Text.Font "Hobo Std")
+        |> rendered
+
+
+tree : Collage msg
+tree =
+    rectangle 30 300
+        |> filled (uniform Color.darkBrown)
+        |> Layout.at Layout.top (triangle 150 |> filled (uniform Color.darkGreen) |> scaleY 1.5 |> shiftY 20)
+
+
+snowman : Collage msg
+snowman =
+    let
+        whiteCircle size = circle size |> (filled (uniform Color.white))  
+        nose = triangle 20
+            |> (filled (uniform Color.orange))
+            |> rotate (degrees 30)
+            |> scaleX 3
+        eye = circle 5
+            |> filled (uniform Color.white)
+    in
+    [ whiteCircle 90
+    , whiteCircle 75
+    , whiteCircle 60 |> Layout.at Layout.right (nose |> shiftX 10) |> Layout.at Layout.base (eye |> shiftY 25)
+    ]
+    |> List.indexedMap (\i e -> shiftY ((toFloat i) * 90) e)
+    |> group
