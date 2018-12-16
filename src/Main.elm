@@ -1,6 +1,7 @@
 import Browser
 import Browser.Events
 import Html exposing (Html)
+import Html.Attributes
 import Time exposing (Posix)
 import Random
 
@@ -132,14 +133,17 @@ isFlakeCaught model flakePosition =
 
 view : Model -> Html Msg
 view model =
-    Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
-        |> Layout.align Layout.base
-        |> Layout.at Layout.base (message model.state)
-        |> Layout.at Layout.topLeft (score model |> shift (50, -50))
-        |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
-        |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
-        |> Events.onMouseMove MouseMove
-        |> svg
+    Html.div []
+        [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href ("https://fonts.googleapis.com/css?family=" ++ config.font)] []
+        , Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
+            |> Layout.align Layout.base
+            |> Layout.at Layout.base (message model.state)
+            |> Layout.at Layout.topLeft (score model |> shift (50, -50))
+            |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
+            |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
+            |> Events.onMouseMove MouseMove
+            |> svg
+        ]
 
 background =
     rectangle config.sceneWidth config.sceneHeight
@@ -169,7 +173,7 @@ snowdrifts =
 customStyle =
     Text.style
         { color = Color.white
-        , typeface = (Text.Font "cursive")
+        , typeface = (Text.Font config.font)
         , size = 100
         , shape = Text.Upright
         , weight = Text.Regular
