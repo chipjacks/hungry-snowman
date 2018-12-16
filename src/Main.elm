@@ -135,8 +135,7 @@ view model =
     Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
         |> Layout.align Layout.base
         |> Layout.at Layout.base (message model.state)
-        |> Layout.at Layout.topRight (score model |> shift (-50, -50))
-        |> Layout.at Layout.topLeft (countdown model |> shift (50, -50))
+        |> Layout.at Layout.topLeft (score model |> shift (50, -50))
         |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
         |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
         |> Events.onMouseMove MouseMove
@@ -162,7 +161,7 @@ snowdrifts =
     , ellipse 150 40
     , ellipse 150 30
     ]
-    |> List.map (filled (uniform Color.grey))
+    |> List.map (filled (uniform Color.lightGrey))
     |> List.indexedMap (\i e -> shiftX ((toFloat i) * 200) e)
     |> group
 
@@ -225,24 +224,27 @@ youWon points =
 score : Model -> Collage Msg
 score model =
     case model.state of
-        Playing _ ->
-            Text.fromString (String.fromInt model.score)
-                |> customStyle
-                |> Text.size 50
-                |> rendered
-
-        option2 ->
-            Text.empty |> rendered
-
-
-countdown : Model -> Collage Msg
-countdown model =
-    case model.state of
         Playing startTime ->
-            Text.fromString (String.fromInt <| round <| (config.gameLengthSeconds - (model.clock - startTime) / 1000))
+            [Text.fromString "⌛︎"
+                |> customStyle
+                |> Text.size 50
+                |> Text.typeface (Text.Font "Cambria")
+                |> rendered
+            ,Text.fromString ((String.fromInt <| round <| (config.gameLengthSeconds - (model.clock - startTime) / 1000) ))
                 |> customStyle
                 |> Text.size 50
                 |> rendered
+            , Layout.spacer 40 0
+            , Text.fromString "❄"
+                |> customStyle
+                |> Text.size 50
+                |> rendered
+            , Layout.spacer 15 0
+            , Text.fromString (String.fromInt model.score)
+                |> customStyle
+                |> Text.size 50
+                |> rendered
+            ] |> Layout.horizontal
 
         _ ->
             Text.empty |> rendered
@@ -250,7 +252,7 @@ countdown model =
 
 headRadius : Int -> Float
 headRadius currentScore =
-    30 + (toFloat currentScore) / 2
+    30 -- + (toFloat currentScore) / 2
 
 
 snowman : Int -> Collage msg
