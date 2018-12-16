@@ -4896,7 +4896,7 @@ var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 var author$project$Main$init = function (_n0) {
 	return _Utils_Tuple2(author$project$Main$model0, elm$core$Platform$Cmd$none);
 };
-var author$project$Config$config = {gameLengthSeconds: 60, maxSnowflakes: 150, sceneHeight: 1000, sceneWidth: 1000, snowflakeFrequency: 75};
+var author$project$Config$config = {font: 'Courgette', gameLengthSeconds: 60, maxSnowflakes: 150, sceneHeight: 1000, sceneWidth: 1000, snowflakeFrequency: 75};
 var author$project$Main$NewSnowflake = function (a) {
 	return {$: 'NewSnowflake', a: a};
 };
@@ -6394,7 +6394,7 @@ var author$project$Main$customStyle = timjs$elm_collage$Collage$Text$style(
 		line: timjs$elm_collage$Collage$Text$None,
 		shape: timjs$elm_collage$Collage$Text$Upright,
 		size: 100,
-		typeface: timjs$elm_collage$Collage$Text$Font('cursive'),
+		typeface: timjs$elm_collage$Collage$Text$Font(author$project$Config$config.font),
 		weight: timjs$elm_collage$Collage$Text$Regular
 	});
 var timjs$elm_collage$Collage$Core$Text = F2(
@@ -7125,6 +7125,27 @@ var author$project$Main$snowman = function (currentScore) {
 							author$project$Main$headRadius(currentScore) * 2)))
 				])));
 };
+var elm$html$Html$div = _VirtualDom_node('div');
+var elm$virtual_dom$VirtualDom$node = function (tag) {
+	return _VirtualDom_node(
+		_VirtualDom_noScript(tag));
+};
+var elm$html$Html$node = elm$virtual_dom$VirtualDom$node;
+var elm$json$Json$Encode$string = _Json_wrap;
+var elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			elm$json$Json$Encode$string(string));
+	});
+var elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
+var elm$html$Html$Attributes$rel = _VirtualDom_attribute('rel');
 var timjs$elm_collage$Collage$scale = F2(
 	function (s, collage) {
 		return A2(
@@ -7199,7 +7220,6 @@ var timjs$elm_collage$Collage$Layout$width = function (col) {
 	return toLeft + toRight;
 };
 var elm$core$String$fromFloat = _String_fromNumber;
-var elm$html$Html$div = _VirtualDom_node('div');
 var elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
 var elm$svg$Svg$svg = elm$svg$Svg$trustedNode('svg');
 var elm$svg$Svg$Attributes$height = _VirtualDom_attribute('height');
@@ -7782,49 +7802,64 @@ var timjs$elm_collage$Collage$Render$svg = function (collage) {
 		A2(timjs$elm_collage$Collage$Layout$align, timjs$elm_collage$Collage$Layout$topLeft, collage));
 };
 var author$project$Main$view = function (model) {
-	return timjs$elm_collage$Collage$Render$svg(
-		A2(
-			timjs$elm_collage$Collage$Events$onMouseMove,
-			author$project$Main$MouseMove,
-			A2(
-				timjs$elm_collage$Collage$Layout$impose,
-				author$project$Main$snowdrifts,
+	return A2(
+		elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A3(
+				elm$html$Html$node,
+				'link',
+				_List_fromArray(
+					[
+						elm$html$Html$Attributes$rel('stylesheet'),
+						elm$html$Html$Attributes$href('https://fonts.googleapis.com/css?family=' + author$project$Config$config.font)
+					]),
+				_List_Nil),
+				timjs$elm_collage$Collage$Render$svg(
 				A2(
-					timjs$elm_collage$Collage$Layout$align,
-					timjs$elm_collage$Collage$Layout$bottomLeft,
+					timjs$elm_collage$Collage$Events$onMouseMove,
+					author$project$Main$MouseMove,
 					A2(
 						timjs$elm_collage$Collage$Layout$impose,
-						A2(
-							timjs$elm_collage$Collage$scale,
-							0.5,
-							A2(
-								timjs$elm_collage$Collage$shiftX,
-								model.playerX,
-								A2(
-									timjs$elm_collage$Collage$shiftY,
-									60,
-									author$project$Main$snowman(model.score)))),
+						author$project$Main$snowdrifts,
 						A2(
 							timjs$elm_collage$Collage$Layout$align,
 							timjs$elm_collage$Collage$Layout$bottomLeft,
-							A3(
-								timjs$elm_collage$Collage$Layout$at,
-								timjs$elm_collage$Collage$Layout$topLeft,
+							A2(
+								timjs$elm_collage$Collage$Layout$impose,
 								A2(
-									timjs$elm_collage$Collage$shift,
-									_Utils_Tuple2(50, -50),
-									author$project$Main$score(model)),
-								A3(
-									timjs$elm_collage$Collage$Layout$at,
-									timjs$elm_collage$Collage$Layout$base,
-									author$project$Main$message(model.state),
+									timjs$elm_collage$Collage$scale,
+									0.5,
 									A2(
-										timjs$elm_collage$Collage$Layout$align,
-										timjs$elm_collage$Collage$Layout$base,
+										timjs$elm_collage$Collage$shiftX,
+										model.playerX,
 										A2(
-											timjs$elm_collage$Collage$Layout$impose,
-											author$project$Main$snowflakes(model),
-											A2(timjs$elm_collage$Collage$Layout$align, timjs$elm_collage$Collage$Layout$topLeft, author$project$Main$background)))))))))));
+											timjs$elm_collage$Collage$shiftY,
+											60,
+											author$project$Main$snowman(model.score)))),
+								A2(
+									timjs$elm_collage$Collage$Layout$align,
+									timjs$elm_collage$Collage$Layout$bottomLeft,
+									A3(
+										timjs$elm_collage$Collage$Layout$at,
+										timjs$elm_collage$Collage$Layout$topLeft,
+										A2(
+											timjs$elm_collage$Collage$shift,
+											_Utils_Tuple2(50, -50),
+											author$project$Main$score(model)),
+										A3(
+											timjs$elm_collage$Collage$Layout$at,
+											timjs$elm_collage$Collage$Layout$base,
+											author$project$Main$message(model.state),
+											A2(
+												timjs$elm_collage$Collage$Layout$align,
+												timjs$elm_collage$Collage$Layout$base,
+												A2(
+													timjs$elm_collage$Collage$Layout$impose,
+													author$project$Main$snowflakes(model),
+													A2(timjs$elm_collage$Collage$Layout$align, timjs$elm_collage$Collage$Layout$topLeft, author$project$Main$background)))))))))))
+			]));
 };
 var elm$browser$Browser$element = _Browser_element;
 var author$project$Main$main = elm$browser$Browser$element(
