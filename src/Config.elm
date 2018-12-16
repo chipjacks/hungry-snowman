@@ -5,4 +5,5 @@ config =
     , sceneHeight = 1000
     , maxSnowflakes = 150
     , snowflakeFrequency = 75
+    , gameLengthSeconds = 60
     }
