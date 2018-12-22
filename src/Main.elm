@@ -4,9 +4,6 @@ import Html exposing (Html)
 import Html.Attributes
 import Time exposing (Posix)
 import Random
-import Http
-import Json.Encode as Encode
-import Json.Decode as Decode
 
 import Collage exposing (..)
 import Collage.Layout as Layout
@@ -69,8 +66,6 @@ type Msg
     | NewSnowflake Posix
     | MouseMove Point
     | StartGame
-    | LoadedFlakes (Result Http.Error Int)
-    | SavedFlakes (Result Http.Error ())
 
 type GameState
     = Unstarted
@@ -130,17 +125,6 @@ update msg model =
 
                 Playing _ ->
                     ( model, Cmd.none )
-
-        LoadedFlakes result ->
-            case result of
-                Ok count ->
-                    ( { model | totalFlakes = Just count }, Cmd.none )
-
-                Err _ ->
-                    ( model, Cmd.none )
-
-        SavedFlakes _ ->
-            ( model, Cmd.none )
 
 
 isFlakeCaught : Model -> Snowflake.Position -> Bool
