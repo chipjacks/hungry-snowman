@@ -96,7 +96,7 @@ update msg model =
                             , score = newScore
                             , snowflakePositions = uncaught
                             , state = if won then Won newScore else model.state
-                        }, if won then finishGame newScore model.totalFlakes else Cmd.none )
+                        }, Cmd.none )
 
                 _ ->
                     ({ model | clock = model.clock + time }, Cmd.none )
@@ -123,13 +123,13 @@ update msg model =
         StartGame ->
             case model.state of
                 Unstarted ->
-                    ( { model | state = Playing model.clock, score = 0 }, loadFlakes)
+                    ( { model | state = Playing model.clock, score = 0 }, Cmd.none )
 
                 Won _ ->
-                    ( { model | state = Playing model.clock, score = 0 }, loadFlakes)
+                    ( { model | state = Playing model.clock, score = 0 }, Cmd.none )
 
-                _ ->
-                    (model, Cmd.none)
+                Playing _ ->
+                    ( model, Cmd.none )
 
         LoadedFlakes result ->
             case result of
@@ -141,36 +141,6 @@ update msg model =
 
         SavedFlakes _ ->
             ( model, Cmd.none )
-
-
-finishGame : Int -> Maybe Int -> Cmd Msg
-finishGame newScore totalFlakes =
-    case (newScore, totalFlakes) of
-        (count, Just flakes) ->
-            saveFlakes (flakes + count)
-
-        _ ->
-            Cmd.none
-
-
-loadFlakes : Cmd Msg
-loadFlakes =
-  Http.get
-    { url = "https://api.jsonbin.io/b/5c16a811dbf79646d0fca78b/latest"
-    , expect = Http.expectJson LoadedFlakes (Decode.field "flakes" Decode.int)
-    }
-
-saveFlakes : Int -> Cmd Msg
-saveFlakes count =
-    Http.request
-        { method = "PUT"
-        , headers = []
-        , url = "https://api.jsonbin.io/b/5c16a811dbf79646d0fca78b"
-        , body = Http.jsonBody (Encode.object [("flakes", Encode.int count)])
-        , expect = Http.expectWhatever SavedFlakes
-        , timeout = Nothing
-        , tracker = Nothing
-        }
 
 
 isFlakeCaught : Model -> Snowflake.Position -> Bool
