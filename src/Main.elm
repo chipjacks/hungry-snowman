@@ -179,7 +179,7 @@ isFlakeCaught model flakePosition =
         tongueX = model.playerX
         tongueY = -850
         position = Snowflake.animatePosition model.clock flakePosition
-        withinDistance a b = compare (abs (a - b)) (headRadius model.score) == LT
+        withinDistance a b = compare (abs (a - b)) headRadius == LT
     in
         withinDistance tongueX position.x && withinDistance tongueY position.y
 
@@ -195,7 +195,6 @@ view model =
         |> Layout.at Layout.topLeft (score model |> shift (50, -50))
         |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
         |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
---        |> Layout.align Layout.bottomRight |> Layout.impose (html (820, 40) info)
         |> Events.onMouseMove MouseMove
         |> Events.onClick StartGame
         |> svg
@@ -273,16 +272,6 @@ youWon points totalFlakes =
         |> Text.size 30
         |> rendered
     , Layout.spacer 0 10
-    -- , case totalFlakes of
-    --     Just flakes ->
-    --         Text.fromString ("The Hungry Snowman has caught " ++ (String.fromInt (flakes + points)) ++ " flakes")
-    --             |> customStyle
-    --             |> Text.size 30
-    --             |> rendered
-
-    --     Nothing ->
-    --         Layout.spacer 0 0
-    -- , Layout.spacer 0 10
     , Text.fromString "Click to play again"
         |> customStyle
         |> Text.size 30
@@ -319,9 +308,9 @@ score model =
             Text.empty |> rendered
 
 
-headRadius : Int -> Float
-headRadius currentScore =
-    30 -- + (toFloat currentScore) / 2
+headRadius : Float
+headRadius =
+    30
 
 
 snowman : Int -> Collage msg
@@ -332,26 +321,11 @@ snowman currentScore =
             |> (filled (uniform Color.orange))
             |> rotate (degrees 30)
             |> scaleX 3
-        eye = circle 5
-            |> filled (uniform Color.white)
     in
     [ whiteCircle 90
     , whiteCircle 75
-    , whiteCircle (headRadius currentScore * 2)
+    , whiteCircle (headRadius * 2)
         |> Layout.at Layout.right (nose |> shiftX 10)
-        |> Layout.at Layout.base (eye |> shiftY 25)
     ]
     |> List.indexedMap (\i e -> shiftY ((toFloat i) * 90) e)
     |> group
-
-
-info : Html Msg
-info =
-    Html.a
-        [ Html.Attributes.href "https://www.nature.org/"
-        , Html.Attributes.target "_blank"
-        , Html.Attributes.style "color" "grey"
-        , Html.Attributes.style "text-decoration" "none"
-        , Html.Attributes.style "font-family" "sans-serif"
-        , Html.Attributes.style "font-size" "12px"
-        ]  [ Html.text "Like The Hungry Snowman? Consider donating to The Nature Conservancy." ]
