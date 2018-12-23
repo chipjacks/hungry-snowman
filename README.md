@@ -2,10 +2,29 @@
 
 See how many snowflakes you can catch in a minute!
 
-[Demo](http://htmlpreview.github.io/?https://github.com/chipjacks/hungry-snowman/blob/master/index.html)
+[Demo](http://chipjacks.com/hungry-snowman/)
 
-## Run locally
+
+## Setup
+
+- Install [elm](http://elm-lang.org)
+
+
+## Compile
 
 ```
-elm reactor
+elm make src/Main.elm --output=elm.js
+```
+
+
+## Run
+
+```
+open index.html
+```
+
+OR, for live reloading, install [elm-live](https://github.com/wking-io/elm-live) and run:
+
+```
+elm-live src/Main.elm --open -- --output=elm.js
 ```
