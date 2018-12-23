@@ -16,6 +16,7 @@ import Animation as A
 
 import Snowflake
 import Config exposing (config)
+import Pointer exposing (Pointer, onPointerMove)
 
 
 -- INIT
@@ -64,7 +65,7 @@ type Msg
     = Tick Float
     | NewRandom (Float, Float)
     | NewSnowflake Posix
-    | MouseMove Point
+    | PointerMove Pointer
     | StartGame
 
 type GameState
@@ -107,10 +108,10 @@ update msg model =
                , Random.generate NewRandom (Random.pair (Random.float 0 1) (Random.float 0 1))
                )
 
-        MouseMove point ->
+        PointerMove pointer ->
             case model.state of
                 Playing startTime ->
-                    ( { model | playerX = Tuple.first point }, Cmd.none )
+                    ( { model | playerX = pointer.x }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -143,15 +144,16 @@ isFlakeCaught model flakePosition =
 view : Model -> List (Html Msg)
 view model =
     [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href ("https://fonts.googleapis.com/css?family=" ++ config.font)] []
-    , Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
-        |> Layout.align Layout.base
-        |> Layout.at Layout.base (message model)
-        |> Layout.at Layout.topLeft (score model |> shift (50, -50))
-        |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
-        |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
-        |> Events.onMouseMove MouseMove
-        |> Events.onClick StartGame
-        |> svg
+    , Html.div [ onPointerMove PointerMove ]
+        [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
+            |> Layout.align Layout.base
+            |> Layout.at Layout.base (message model)
+            |> Layout.at Layout.topLeft (score model |> shift (50, -50))
+            |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
+            |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
+            |> Events.onClick StartGame
+            |> svg
+        ]
     ]
 
 background =
