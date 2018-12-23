@@ -144,7 +144,7 @@ isFlakeCaught model flakePosition =
 view : Model -> List (Html Msg)
 view model =
     [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href ("https://fonts.googleapis.com/css?family=" ++ config.font)] []
-    , Html.div [ onPointerMove PointerMove ]
+    , Html.div [ onPointerMove PointerMove, Html.Attributes.style "touch-action" "none" ]
         [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
             |> Layout.align Layout.base
             |> Layout.at Layout.base (message model)
