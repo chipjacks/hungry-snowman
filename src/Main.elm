@@ -39,6 +39,7 @@ model0 =
         Nothing
         Unstarted
         1000
+        1000
 
 init : () -> (Model, Cmd Msg)
 init _ =
@@ -63,6 +64,7 @@ type alias Model =
   , totalFlakes : Maybe Int
   , state : GameState
   , sceneHeight : Float
+  , sceneWidth : Float
   }
 
 type Msg
@@ -107,7 +109,7 @@ update msg model =
 
         NewSnowflake clock ->
             let
-                position = Snowflake.initPosition model.clock model.randomness model.sceneHeight
+                position = Snowflake.initPosition model.clock model.randomness model.sceneWidth model.sceneHeight
             in
                ({ model | snowflakePositions = position :: (List.take config.maxSnowflakes model.snowflakePositions) }
                , Random.generate NewRandom (Random.pair (Random.float 0 1) (Random.float 0 1))
@@ -122,7 +124,11 @@ update msg model =
                     ( model, Cmd.none )
 
         GotViewport viewport ->
-           ( { model | sceneHeight = viewport.scene.height }, Cmd.none )
+            let
+                width = max 700 viewport.scene.width
+                height = max 700 viewport.scene.height
+            in
+                ( { model | sceneHeight = height, sceneWidth = width }, Cmd.none )
 
         StartGame ->
             case model.state of
@@ -156,19 +162,19 @@ view model =
         , Html.Attributes.style "touch-action" "none"
         , Html.Attributes.style "position" "fixed"
         ]
-        [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft (background model.sceneHeight))
+        [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft (background model.sceneWidth model.sceneHeight))
             |> Layout.align Layout.base
             |> Layout.at Layout.base (message model)
             |> Layout.at Layout.topLeft (score model |> shift (50, -50))
             |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 160 |> shiftX model.playerX |> scale 0.5)
-            |> Layout.align Layout.bottomLeft |> Layout.impose (snowdrifts |> shiftY 100)
+            |> Layout.align Layout.bottomLeft |> Layout.impose (snowdrifts model.sceneWidth |> shiftY 100)
             |> Events.onClick StartGame
             |> svg
         ]
     ]
 
-background height =
-    rectangle config.sceneWidth height
+background width height =
+    rectangle width height
         |> filled (uniform Color.lightBlue)
 
 snowflakes : Model -> Collage msg
@@ -178,8 +184,8 @@ snowflakes model =
         |> List.map (\p -> Snowflake.snowflake |> shiftX p.x |> shiftY p.y |> rotate p.rotation)
         |> group
 
-snowdrifts : Collage msg
-snowdrifts =
+snowdrifts : Float -> Collage msg
+snowdrifts width =
     [ ellipse 150 30
     , ellipse 140 50
     , ellipse 200 40
@@ -190,8 +196,9 @@ snowdrifts =
     |> List.map (filled (uniform Color.lightGrey))
     |> List.indexedMap (\i e -> shiftX ((toFloat i) * 200) e)
     |> group
+    |> scaleX (width / 1000)
     |> Layout.at Layout.bottom
-        ( rectangle config.sceneWidth 100
+        ( rectangle width 100
             |> (filled (uniform Color.lightGrey))
             |> (Layout.align Layout.left)
         )

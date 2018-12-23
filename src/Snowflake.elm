@@ -18,13 +18,13 @@ snowflake =
     |> List.map (\d -> line 10 |> traced (solid thin (uniform Color.white)) |> rotate d)
     |> group
 
-initPosition : A.Clock -> (Float, Float) -> Float -> Position
-initPosition startTime (xRand, yRand) sceneHeight =
+initPosition : A.Clock -> (Float, Float) -> Float -> Float -> Position
+initPosition startTime (xRand, yRand) sceneWidth sceneHeight =
     let
         duration = yRand * 5000 + 10000
     in
         { y = A.animation startTime |> A.duration duration |> A.from 5 |> A.to (0 - sceneHeight + 5)
-        , x = A.static (5 + (config.sceneWidth - 10) * xRand)
+        , x = A.static (5 + (sceneWidth - 10) * xRand)
         , rotation = A.animation startTime |> A.duration duration |> A.from 0 |> A.to 10
         }
 
