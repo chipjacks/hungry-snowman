@@ -7833,7 +7833,8 @@ var author$project$Main$view = function (model) {
 				[
 					author$project$Pointer$onPointerMove(author$project$Main$PointerMove),
 					A2(elm$html$Html$Attributes$style, 'touch-action', 'none'),
-					A2(elm$html$Html$Attributes$style, 'position', 'fixed')
+					A2(elm$html$Html$Attributes$style, 'position', 'fixed'),
+					A2(elm$html$Html$Attributes$style, '-webkit-user-select', 'none')
 				]),
 			_List_fromArray(
 				[
