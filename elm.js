@@ -793,6 +793,197 @@ var _List_sortWith = F2(function(f, xs)
 
 
 
+// TASKS
+
+function _Scheduler_succeed(value)
+{
+	return {
+		$: 0,
+		a: value
+	};
+}
+
+function _Scheduler_fail(error)
+{
+	return {
+		$: 1,
+		a: error
+	};
+}
+
+function _Scheduler_binding(callback)
+{
+	return {
+		$: 2,
+		b: callback,
+		c: null
+	};
+}
+
+var _Scheduler_andThen = F2(function(callback, task)
+{
+	return {
+		$: 3,
+		b: callback,
+		d: task
+	};
+});
+
+var _Scheduler_onError = F2(function(callback, task)
+{
+	return {
+		$: 4,
+		b: callback,
+		d: task
+	};
+});
+
+function _Scheduler_receive(callback)
+{
+	return {
+		$: 5,
+		b: callback
+	};
+}
+
+
+// PROCESSES
+
+var _Scheduler_guid = 0;
+
+function _Scheduler_rawSpawn(task)
+{
+	var proc = {
+		$: 0,
+		e: _Scheduler_guid++,
+		f: task,
+		g: null,
+		h: []
+	};
+
+	_Scheduler_enqueue(proc);
+
+	return proc;
+}
+
+function _Scheduler_spawn(task)
+{
+	return _Scheduler_binding(function(callback) {
+		callback(_Scheduler_succeed(_Scheduler_rawSpawn(task)));
+	});
+}
+
+function _Scheduler_rawSend(proc, msg)
+{
+	proc.h.push(msg);
+	_Scheduler_enqueue(proc);
+}
+
+var _Scheduler_send = F2(function(proc, msg)
+{
+	return _Scheduler_binding(function(callback) {
+		_Scheduler_rawSend(proc, msg);
+		callback(_Scheduler_succeed(_Utils_Tuple0));
+	});
+});
+
+function _Scheduler_kill(proc)
+{
+	return _Scheduler_binding(function(callback) {
+		var task = proc.f;
+		if (task.$ === 2 && task.c)
+		{
+			task.c();
+		}
+
+		proc.f = null;
+
+		callback(_Scheduler_succeed(_Utils_Tuple0));
+	});
+}
+
+
+/* STEP PROCESSES
+
+type alias Process =
+  { $ : tag
+  , id : unique_id
+  , root : Task
+  , stack : null | { $: SUCCEED | FAIL, a: callback, b: stack }
+  , mailbox : [msg]
+  }
+
+*/
+
+
+var _Scheduler_working = false;
+var _Scheduler_queue = [];
+
+
+function _Scheduler_enqueue(proc)
+{
+	_Scheduler_queue.push(proc);
+	if (_Scheduler_working)
+	{
+		return;
+	}
+	_Scheduler_working = true;
+	while (proc = _Scheduler_queue.shift())
+	{
+		_Scheduler_step(proc);
+	}
+	_Scheduler_working = false;
+}
+
+
+function _Scheduler_step(proc)
+{
+	while (proc.f)
+	{
+		var rootTag = proc.f.$;
+		if (rootTag === 0 || rootTag === 1)
+		{
+			while (proc.g && proc.g.$ !== rootTag)
+			{
+				proc.g = proc.g.i;
+			}
+			if (!proc.g)
+			{
+				return;
+			}
+			proc.f = proc.g.b(proc.f.a);
+			proc.g = proc.g.i;
+		}
+		else if (rootTag === 2)
+		{
+			proc.f.c = proc.f.b(function(newRoot) {
+				proc.f = newRoot;
+				_Scheduler_enqueue(proc);
+			});
+			return;
+		}
+		else if (rootTag === 5)
+		{
+			if (proc.h.length === 0)
+			{
+				return;
+			}
+			proc.f = proc.f.b(proc.h.shift());
+		}
+		else // if (rootTag === 3 || rootTag === 4)
+		{
+			proc.g = {
+				$: rootTag === 3 ? 0 : 1,
+				b: proc.f.b,
+				i: proc.g
+			};
+			proc.f = proc.f.d;
+		}
+	}
+}
+
+
+
 // MATH
 
 var _Basics_add = F2(function(a, b) { return a + b; });
@@ -1641,197 +1832,6 @@ function _Json_addEntry(func)
 }
 
 var _Json_encodeNull = _Json_wrap(null);
-
-
-
-// TASKS
-
-function _Scheduler_succeed(value)
-{
-	return {
-		$: 0,
-		a: value
-	};
-}
-
-function _Scheduler_fail(error)
-{
-	return {
-		$: 1,
-		a: error
-	};
-}
-
-function _Scheduler_binding(callback)
-{
-	return {
-		$: 2,
-		b: callback,
-		c: null
-	};
-}
-
-var _Scheduler_andThen = F2(function(callback, task)
-{
-	return {
-		$: 3,
-		b: callback,
-		d: task
-	};
-});
-
-var _Scheduler_onError = F2(function(callback, task)
-{
-	return {
-		$: 4,
-		b: callback,
-		d: task
-	};
-});
-
-function _Scheduler_receive(callback)
-{
-	return {
-		$: 5,
-		b: callback
-	};
-}
-
-
-// PROCESSES
-
-var _Scheduler_guid = 0;
-
-function _Scheduler_rawSpawn(task)
-{
-	var proc = {
-		$: 0,
-		e: _Scheduler_guid++,
-		f: task,
-		g: null,
-		h: []
-	};
-
-	_Scheduler_enqueue(proc);
-
-	return proc;
-}
-
-function _Scheduler_spawn(task)
-{
-	return _Scheduler_binding(function(callback) {
-		callback(_Scheduler_succeed(_Scheduler_rawSpawn(task)));
-	});
-}
-
-function _Scheduler_rawSend(proc, msg)
-{
-	proc.h.push(msg);
-	_Scheduler_enqueue(proc);
-}
-
-var _Scheduler_send = F2(function(proc, msg)
-{
-	return _Scheduler_binding(function(callback) {
-		_Scheduler_rawSend(proc, msg);
-		callback(_Scheduler_succeed(_Utils_Tuple0));
-	});
-});
-
-function _Scheduler_kill(proc)
-{
-	return _Scheduler_binding(function(callback) {
-		var task = proc.f;
-		if (task.$ === 2 && task.c)
-		{
-			task.c();
-		}
-
-		proc.f = null;
-
-		callback(_Scheduler_succeed(_Utils_Tuple0));
-	});
-}
-
-
-/* STEP PROCESSES
-
-type alias Process =
-  { $ : tag
-  , id : unique_id
-  , root : Task
-  , stack : null | { $: SUCCEED | FAIL, a: callback, b: stack }
-  , mailbox : [msg]
-  }
-
-*/
-
-
-var _Scheduler_working = false;
-var _Scheduler_queue = [];
-
-
-function _Scheduler_enqueue(proc)
-{
-	_Scheduler_queue.push(proc);
-	if (_Scheduler_working)
-	{
-		return;
-	}
-	_Scheduler_working = true;
-	while (proc = _Scheduler_queue.shift())
-	{
-		_Scheduler_step(proc);
-	}
-	_Scheduler_working = false;
-}
-
-
-function _Scheduler_step(proc)
-{
-	while (proc.f)
-	{
-		var rootTag = proc.f.$;
-		if (rootTag === 0 || rootTag === 1)
-		{
-			while (proc.g && proc.g.$ !== rootTag)
-			{
-				proc.g = proc.g.i;
-			}
-			if (!proc.g)
-			{
-				return;
-			}
-			proc.f = proc.g.b(proc.f.a);
-			proc.g = proc.g.i;
-		}
-		else if (rootTag === 2)
-		{
-			proc.f.c = proc.f.b(function(newRoot) {
-				proc.f = newRoot;
-				_Scheduler_enqueue(proc);
-			});
-			return;
-		}
-		else if (rootTag === 5)
-		{
-			if (proc.h.length === 0)
-			{
-				return;
-			}
-			proc.f = proc.f.b(proc.h.shift());
-		}
-		else // if (rootTag === 3 || rootTag === 4)
-		{
-			proc.g = {
-				$: rootTag === 3 ? 0 : 1,
-				b: proc.f.b,
-				i: proc.g
-			};
-			proc.f = proc.f.d;
-		}
-	}
-}
 
 
 
@@ -4393,9 +4393,12 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
-var author$project$Main$Model = F7(
-	function (clock, snowflakePositions, randomness, playerX, score, totalFlakes, state) {
-		return {clock: clock, playerX: playerX, randomness: randomness, score: score, snowflakePositions: snowflakePositions, state: state, totalFlakes: totalFlakes};
+var author$project$Main$GotViewport = function (a) {
+	return {$: 'GotViewport', a: a};
+};
+var author$project$Main$Model = F9(
+	function (clock, snowflakePositions, randomness, playerX, score, totalFlakes, state, sceneHeight, sceneWidth) {
+		return {clock: clock, playerX: playerX, randomness: randomness, sceneHeight: sceneHeight, sceneWidth: sceneWidth, score: score, snowflakePositions: snowflakePositions, state: state, totalFlakes: totalFlakes};
 	});
 var author$project$Main$Unstarted = {$: 'Unstarted'};
 var elm$core$Maybe$Nothing = {$: 'Nothing'};
@@ -4479,7 +4482,7 @@ var elm$core$Set$toList = function (_n0) {
 	var dict = _n0.a;
 	return elm$core$Dict$keys(dict);
 };
-var author$project$Main$model0 = A7(
+var author$project$Main$model0 = A9(
 	author$project$Main$Model,
 	0,
 	_List_Nil,
@@ -4487,7 +4490,30 @@ var author$project$Main$model0 = A7(
 	0,
 	0,
 	elm$core$Maybe$Nothing,
-	author$project$Main$Unstarted);
+	author$project$Main$Unstarted,
+	1000,
+	1000);
+var elm$browser$Browser$External = function (a) {
+	return {$: 'External', a: a};
+};
+var elm$browser$Browser$Internal = function (a) {
+	return {$: 'Internal', a: a};
+};
+var elm$browser$Browser$Dom$NotFound = function (a) {
+	return {$: 'NotFound', a: a};
+};
+var elm$core$Basics$never = function (_n0) {
+	never:
+	while (true) {
+		var nvr = _n0.a;
+		var $temp$_n0 = nvr;
+		_n0 = $temp$_n0;
+		continue never;
+	}
+};
+var elm$core$Maybe$Just = function (a) {
+	return {$: 'Just', a: a};
+};
 var elm$core$Basics$False = {$: 'False'};
 var elm$core$Basics$True = {$: 'True'};
 var elm$core$Result$isOk = function (result) {
@@ -4496,6 +4522,144 @@ var elm$core$Result$isOk = function (result) {
 	} else {
 		return false;
 	}
+};
+var elm$core$Basics$identity = function (x) {
+	return x;
+};
+var elm$core$Task$Perform = function (a) {
+	return {$: 'Perform', a: a};
+};
+var elm$core$Task$succeed = _Scheduler_succeed;
+var elm$core$Task$init = elm$core$Task$succeed(_Utils_Tuple0);
+var elm$core$Basics$add = _Basics_add;
+var elm$core$Basics$gt = _Utils_gt;
+var elm$core$List$foldl = F3(
+	function (func, acc, list) {
+		foldl:
+		while (true) {
+			if (!list.b) {
+				return acc;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				var $temp$func = func,
+					$temp$acc = A2(func, x, acc),
+					$temp$list = xs;
+				func = $temp$func;
+				acc = $temp$acc;
+				list = $temp$list;
+				continue foldl;
+			}
+		}
+	});
+var elm$core$List$reverse = function (list) {
+	return A3(elm$core$List$foldl, elm$core$List$cons, _List_Nil, list);
+};
+var elm$core$List$foldrHelper = F4(
+	function (fn, acc, ctr, ls) {
+		if (!ls.b) {
+			return acc;
+		} else {
+			var a = ls.a;
+			var r1 = ls.b;
+			if (!r1.b) {
+				return A2(fn, a, acc);
+			} else {
+				var b = r1.a;
+				var r2 = r1.b;
+				if (!r2.b) {
+					return A2(
+						fn,
+						a,
+						A2(fn, b, acc));
+				} else {
+					var c = r2.a;
+					var r3 = r2.b;
+					if (!r3.b) {
+						return A2(
+							fn,
+							a,
+							A2(
+								fn,
+								b,
+								A2(fn, c, acc)));
+					} else {
+						var d = r3.a;
+						var r4 = r3.b;
+						var res = (ctr > 500) ? A3(
+							elm$core$List$foldl,
+							fn,
+							acc,
+							elm$core$List$reverse(r4)) : A4(elm$core$List$foldrHelper, fn, acc, ctr + 1, r4);
+						return A2(
+							fn,
+							a,
+							A2(
+								fn,
+								b,
+								A2(
+									fn,
+									c,
+									A2(fn, d, res))));
+					}
+				}
+			}
+		}
+	});
+var elm$core$List$foldr = F3(
+	function (fn, acc, ls) {
+		return A4(elm$core$List$foldrHelper, fn, acc, 0, ls);
+	});
+var elm$core$List$map = F2(
+	function (f, xs) {
+		return A3(
+			elm$core$List$foldr,
+			F2(
+				function (x, acc) {
+					return A2(
+						elm$core$List$cons,
+						f(x),
+						acc);
+				}),
+			_List_Nil,
+			xs);
+	});
+var elm$core$Basics$apR = F2(
+	function (x, f) {
+		return f(x);
+	});
+var elm$core$Task$andThen = _Scheduler_andThen;
+var elm$core$Task$map = F2(
+	function (func, taskA) {
+		return A2(
+			elm$core$Task$andThen,
+			function (a) {
+				return elm$core$Task$succeed(
+					func(a));
+			},
+			taskA);
+	});
+var elm$core$Task$map2 = F3(
+	function (func, taskA, taskB) {
+		return A2(
+			elm$core$Task$andThen,
+			function (a) {
+				return A2(
+					elm$core$Task$andThen,
+					function (b) {
+						return elm$core$Task$succeed(
+							A2(func, a, b));
+					},
+					taskB);
+			},
+			taskA);
+	});
+var elm$core$Task$sequence = function (tasks) {
+	return A3(
+		elm$core$List$foldr,
+		elm$core$Task$map2(elm$core$List$cons),
+		elm$core$Task$succeed(_List_Nil),
+		tasks);
 };
 var elm$core$Array$branchFactor = 32;
 var elm$core$Array$Array_elm_builtin = F4(
@@ -4520,28 +4684,6 @@ var elm$core$Array$SubTree = function (a) {
 	return {$: 'SubTree', a: a};
 };
 var elm$core$Elm$JsArray$initializeFromList = _JsArray_initializeFromList;
-var elm$core$List$foldl = F3(
-	function (func, acc, list) {
-		foldl:
-		while (true) {
-			if (!list.b) {
-				return acc;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				var $temp$func = func,
-					$temp$acc = A2(func, x, acc),
-					$temp$list = xs;
-				func = $temp$func;
-				acc = $temp$acc;
-				list = $temp$list;
-				continue foldl;
-			}
-		}
-	});
-var elm$core$List$reverse = function (list) {
-	return A3(elm$core$List$foldl, elm$core$List$cons, _List_Nil, list);
-};
 var elm$core$Array$compressNodes = F2(
 	function (nodes, acc) {
 		compressNodes:
@@ -4564,10 +4706,6 @@ var elm$core$Array$compressNodes = F2(
 			}
 		}
 	});
-var elm$core$Basics$apR = F2(
-	function (x, f) {
-		return f(x);
-	});
 var elm$core$Basics$eq = _Utils_equal;
 var elm$core$Tuple$first = function (_n0) {
 	var x = _n0.a;
@@ -4589,13 +4727,11 @@ var elm$core$Array$treeFromBuilder = F2(
 			}
 		}
 	});
-var elm$core$Basics$add = _Basics_add;
 var elm$core$Basics$apL = F2(
 	function (f, x) {
 		return f(x);
 	});
 var elm$core$Basics$floor = _Basics_floor;
-var elm$core$Basics$gt = _Utils_gt;
 var elm$core$Basics$max = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) > 0) ? x : y;
@@ -4668,9 +4804,6 @@ var elm$core$Array$initialize = F2(
 			return A5(elm$core$Array$initializeHelp, fn, initialFromIndex, len, _List_Nil, tail);
 		}
 	});
-var elm$core$Maybe$Just = function (a) {
-	return {$: 'Just', a: a};
-};
 var elm$core$Result$Err = function (a) {
 	return {$: 'Err', a: a};
 };
@@ -4882,155 +5015,6 @@ var elm$json$Json$Decode$errorToStringHelp = F2(
 			}
 		}
 	});
-var elm$core$Platform$Cmd$batch = _Platform_batch;
-var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
-var author$project$Main$init = function (_n0) {
-	return _Utils_Tuple2(author$project$Main$model0, elm$core$Platform$Cmd$none);
-};
-var author$project$Config$config = {font: 'Courgette', gameLengthSeconds: 60, maxSnowflakes: 150, sceneHeight: 1000, sceneWidth: 1000, snowflakeFrequency: 75};
-var author$project$Main$NewSnowflake = function (a) {
-	return {$: 'NewSnowflake', a: a};
-};
-var author$project$Main$Tick = function (a) {
-	return {$: 'Tick', a: a};
-};
-var elm$browser$Browser$AnimationManager$Delta = function (a) {
-	return {$: 'Delta', a: a};
-};
-var elm$browser$Browser$AnimationManager$State = F3(
-	function (subs, request, oldTime) {
-		return {oldTime: oldTime, request: request, subs: subs};
-	});
-var elm$core$Task$succeed = _Scheduler_succeed;
-var elm$browser$Browser$AnimationManager$init = elm$core$Task$succeed(
-	A3(elm$browser$Browser$AnimationManager$State, _List_Nil, elm$core$Maybe$Nothing, 0));
-var elm$browser$Browser$External = function (a) {
-	return {$: 'External', a: a};
-};
-var elm$browser$Browser$Internal = function (a) {
-	return {$: 'Internal', a: a};
-};
-var elm$browser$Browser$Dom$NotFound = function (a) {
-	return {$: 'NotFound', a: a};
-};
-var elm$core$Basics$never = function (_n0) {
-	never:
-	while (true) {
-		var nvr = _n0.a;
-		var $temp$_n0 = nvr;
-		_n0 = $temp$_n0;
-		continue never;
-	}
-};
-var elm$core$Basics$identity = function (x) {
-	return x;
-};
-var elm$core$Task$Perform = function (a) {
-	return {$: 'Perform', a: a};
-};
-var elm$core$Task$init = elm$core$Task$succeed(_Utils_Tuple0);
-var elm$core$List$foldrHelper = F4(
-	function (fn, acc, ctr, ls) {
-		if (!ls.b) {
-			return acc;
-		} else {
-			var a = ls.a;
-			var r1 = ls.b;
-			if (!r1.b) {
-				return A2(fn, a, acc);
-			} else {
-				var b = r1.a;
-				var r2 = r1.b;
-				if (!r2.b) {
-					return A2(
-						fn,
-						a,
-						A2(fn, b, acc));
-				} else {
-					var c = r2.a;
-					var r3 = r2.b;
-					if (!r3.b) {
-						return A2(
-							fn,
-							a,
-							A2(
-								fn,
-								b,
-								A2(fn, c, acc)));
-					} else {
-						var d = r3.a;
-						var r4 = r3.b;
-						var res = (ctr > 500) ? A3(
-							elm$core$List$foldl,
-							fn,
-							acc,
-							elm$core$List$reverse(r4)) : A4(elm$core$List$foldrHelper, fn, acc, ctr + 1, r4);
-						return A2(
-							fn,
-							a,
-							A2(
-								fn,
-								b,
-								A2(
-									fn,
-									c,
-									A2(fn, d, res))));
-					}
-				}
-			}
-		}
-	});
-var elm$core$List$foldr = F3(
-	function (fn, acc, ls) {
-		return A4(elm$core$List$foldrHelper, fn, acc, 0, ls);
-	});
-var elm$core$List$map = F2(
-	function (f, xs) {
-		return A3(
-			elm$core$List$foldr,
-			F2(
-				function (x, acc) {
-					return A2(
-						elm$core$List$cons,
-						f(x),
-						acc);
-				}),
-			_List_Nil,
-			xs);
-	});
-var elm$core$Task$andThen = _Scheduler_andThen;
-var elm$core$Task$map = F2(
-	function (func, taskA) {
-		return A2(
-			elm$core$Task$andThen,
-			function (a) {
-				return elm$core$Task$succeed(
-					func(a));
-			},
-			taskA);
-	});
-var elm$core$Task$map2 = F3(
-	function (func, taskA, taskB) {
-		return A2(
-			elm$core$Task$andThen,
-			function (a) {
-				return A2(
-					elm$core$Task$andThen,
-					function (b) {
-						return elm$core$Task$succeed(
-							A2(func, a, b));
-					},
-					taskB);
-			},
-			taskA);
-	});
-var elm$core$Task$sequence = function (tasks) {
-	return A3(
-		elm$core$List$foldr,
-		elm$core$Task$map2(elm$core$List$cons),
-		elm$core$Task$succeed(_List_Nil),
-		tasks);
-};
 var elm$core$Platform$sendToApp = _Platform_sendToApp;
 var elm$core$Task$spawnCmd = F2(
 	function (router, _n0) {
@@ -5216,6 +5200,28 @@ var elm$url$Url$fromString = function (str) {
 		elm$url$Url$Https,
 		A2(elm$core$String$dropLeft, 8, str)) : elm$core$Maybe$Nothing);
 };
+var elm$browser$Browser$Dom$getViewport = _Browser_withWindow(_Browser_getViewport);
+var author$project$Main$init = function (_n0) {
+	return _Utils_Tuple2(
+		author$project$Main$model0,
+		A2(elm$core$Task$perform, author$project$Main$GotViewport, elm$browser$Browser$Dom$getViewport));
+};
+var author$project$Config$config = {font: 'Courgette', gameLengthSeconds: 60, maxSnowflakes: 150, snowflakeFrequency: 75};
+var author$project$Main$NewSnowflake = function (a) {
+	return {$: 'NewSnowflake', a: a};
+};
+var author$project$Main$Tick = function (a) {
+	return {$: 'Tick', a: a};
+};
+var elm$browser$Browser$AnimationManager$Delta = function (a) {
+	return {$: 'Delta', a: a};
+};
+var elm$browser$Browser$AnimationManager$State = F3(
+	function (subs, request, oldTime) {
+		return {oldTime: oldTime, request: request, subs: subs};
+	});
+var elm$browser$Browser$AnimationManager$init = elm$core$Task$succeed(
+	A3(elm$browser$Browser$AnimationManager$State, _List_Nil, elm$core$Maybe$Nothing, 0));
 var elm$browser$Browser$AnimationManager$now = _Browser_now(_Utils_Tuple0);
 var elm$browser$Browser$AnimationManager$rAF = _Browser_rAF(_Utils_Tuple0);
 var elm$core$Platform$sendToSelf = _Platform_sendToSelf;
@@ -5763,6 +5769,7 @@ var author$project$Main$Won = function (a) {
 	return {$: 'Won', a: a};
 };
 var author$project$Main$headRadius = 30;
+var author$project$Main$snowmanHeight = 250;
 var elm$core$Basics$clamp = F3(
 	function (low, high, number) {
 		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
@@ -5831,7 +5838,7 @@ var author$project$Main$isFlakeCaught = F2(
 						author$project$Main$headRadius),
 					elm$core$Basics$LT);
 			});
-		var tongueY = -850;
+		var tongueY = (0 - model.sceneHeight) + author$project$Main$snowmanHeight;
 		var tongueX = model.playerX;
 		var position = A2(author$project$Snowflake$animatePosition, model.clock, flakePosition);
 		return A2(withinDistance, tongueX, position.x) && A2(withinDistance, tongueY, position.y);
@@ -5881,8 +5888,8 @@ var mgold$elm_animation$Animation$to = F2(
 				a,
 				{ramp: elm$core$Maybe$Nothing, to_: x}));
 	});
-var author$project$Snowflake$initPosition = F2(
-	function (startTime, _n0) {
+var author$project$Snowflake$initPosition = F4(
+	function (startTime, _n0, sceneWidth, sceneHeight) {
 		var xRand = _n0.a;
 		var yRand = _n0.b;
 		var duration = (yRand * 5000) + 10000;
@@ -5897,10 +5904,10 @@ var author$project$Snowflake$initPosition = F2(
 						mgold$elm_animation$Animation$duration,
 						duration,
 						mgold$elm_animation$Animation$animation(startTime)))),
-			x: mgold$elm_animation$Animation$static(5 + ((author$project$Config$config.sceneWidth - 10) * xRand)),
+			x: mgold$elm_animation$Animation$static(5 + ((sceneWidth - 10) * xRand)),
 			y: A2(
 				mgold$elm_animation$Animation$to,
-				(0 - author$project$Config$config.sceneHeight) + 5,
+				(0 - sceneHeight) + 5,
 				A2(
 					mgold$elm_animation$Animation$from,
 					5,
@@ -6054,6 +6061,8 @@ var elm$core$List$take = F2(
 	function (n, list) {
 		return A3(elm$core$List$takeFast, 0, n, list);
 	});
+var elm$core$Platform$Cmd$batch = _Platform_batch;
+var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 var elm$core$Bitwise$and = _Bitwise_and;
 var elm$random$Random$Generator = function (a) {
 	return {$: 'Generator', a: a};
@@ -6246,7 +6255,7 @@ var author$project$Main$update = F2(
 					elm$core$Platform$Cmd$none);
 			case 'NewSnowflake':
 				var clock = msg.a;
-				var position = A2(author$project$Snowflake$initPosition, model.clock, model.randomness);
+				var position = A4(author$project$Snowflake$initPosition, model.clock, model.randomness, model.sceneWidth, model.sceneHeight);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -6263,19 +6272,28 @@ var author$project$Main$update = F2(
 							elm$random$Random$pair,
 							A2(elm$random$Random$float, 0, 1),
 							A2(elm$random$Random$float, 0, 1))));
-			case 'MouseMove':
-				var point = msg.a;
+			case 'PointerMove':
+				var pointer = msg.a;
 				var _n4 = model.state;
 				if (_n4.$ === 'Playing') {
 					var startTime = _n4.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{playerX: point.a}),
+							{playerX: pointer.x}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 				}
+			case 'GotViewport':
+				var viewport = msg.a;
+				var width = A2(elm$core$Basics$max, 700, viewport.scene.width);
+				var height = A2(elm$core$Basics$max, 700, viewport.scene.height);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{sceneHeight: height, sceneWidth: width}),
+					elm$core$Platform$Cmd$none);
 			default:
 				var _n5 = model.state;
 				switch (_n5.$) {
@@ -6302,8 +6320,8 @@ var author$project$Main$update = F2(
 				}
 		}
 	});
-var author$project$Main$MouseMove = function (a) {
-	return {$: 'MouseMove', a: a};
+var author$project$Main$PointerMove = function (a) {
+	return {$: 'PointerMove', a: a};
 };
 var author$project$Main$StartGame = {$: 'StartGame'};
 var the_sett$elm_color$Color$Color = F4(
@@ -6372,10 +6390,13 @@ var timjs$elm_collage$Collage$rectangle = F2(
 	function (w, h) {
 		return A3(timjs$elm_collage$Collage$roundedRectangle, w, h, 0);
 	});
-var author$project$Main$background = A2(
-	timjs$elm_collage$Collage$filled,
-	timjs$elm_collage$Collage$uniform(the_sett$elm_color$Color$lightBlue),
-	A2(timjs$elm_collage$Collage$rectangle, author$project$Config$config.sceneWidth, author$project$Config$config.sceneHeight));
+var author$project$Main$background = F2(
+	function (width, height) {
+		return A2(
+			timjs$elm_collage$Collage$filled,
+			timjs$elm_collage$Collage$uniform(the_sett$elm_color$Color$lightBlue),
+			A2(timjs$elm_collage$Collage$rectangle, width, height));
+	});
 var the_sett$elm_color$Color$white = A4(the_sett$elm_color$Color$rgba, 255, 255, 255, 1);
 var timjs$elm_collage$Collage$Text$Font = function (a) {
 	return {$: 'Font', a: a};
@@ -6913,6 +6934,26 @@ var timjs$elm_collage$Collage$Core$Ellipse = F2(
 		return {$: 'Ellipse', a: a, b: b};
 	});
 var timjs$elm_collage$Collage$ellipse = timjs$elm_collage$Collage$Core$Ellipse;
+var timjs$elm_collage$Collage$scaleXY = F2(
+	function (_n0, collage) {
+		var sx = _n0.a;
+		var sy = _n0.b;
+		var _n1 = collage.scale;
+		var sx0 = _n1.a;
+		var sy0 = _n1.b;
+		return _Utils_update(
+			collage,
+			{
+				scale: _Utils_Tuple2(sx0 * sx, sy0 * sy)
+			});
+	});
+var timjs$elm_collage$Collage$scaleX = F2(
+	function (s, collage) {
+		return A2(
+			timjs$elm_collage$Collage$scaleXY,
+			_Utils_Tuple2(s, 1),
+			collage);
+	});
 var timjs$elm_collage$Collage$shiftX = F2(
 	function (dx, collage) {
 		var _n0 = collage.shift;
@@ -6924,26 +6965,76 @@ var timjs$elm_collage$Collage$shiftX = F2(
 				shift: _Utils_Tuple2(x + dx, y)
 			});
 	});
-var author$project$Main$snowdrifts = timjs$elm_collage$Collage$group(
-	A2(
-		elm$core$List$indexedMap,
-		F2(
-			function (i, e) {
-				return A2(timjs$elm_collage$Collage$shiftX, i * 200, e);
-			}),
-		A2(
-			elm$core$List$map,
-			timjs$elm_collage$Collage$filled(
-				timjs$elm_collage$Collage$uniform(the_sett$elm_color$Color$lightGrey)),
+var timjs$elm_collage$Collage$opposite = function (_n0) {
+	var x = _n0.a;
+	var y = _n0.b;
+	return _Utils_Tuple2(-x, -y);
+};
+var timjs$elm_collage$Collage$Layout$align = F2(
+	function (anchor, col) {
+		return A2(
+			timjs$elm_collage$Collage$shift,
+			timjs$elm_collage$Collage$opposite(
+				anchor(col)),
+			col);
+	});
+var timjs$elm_collage$Collage$Layout$at = F3(
+	function (anchor, fore, back) {
+		return timjs$elm_collage$Collage$Layout$stack(
 			_List_fromArray(
 				[
-					A2(timjs$elm_collage$Collage$ellipse, 150, 30),
-					A2(timjs$elm_collage$Collage$ellipse, 140, 50),
-					A2(timjs$elm_collage$Collage$ellipse, 200, 40),
-					A2(timjs$elm_collage$Collage$ellipse, 150, 50),
-					A2(timjs$elm_collage$Collage$ellipse, 150, 40),
-					A2(timjs$elm_collage$Collage$ellipse, 150, 30)
-				]))));
+					A2(
+					timjs$elm_collage$Collage$shift,
+					anchor(back),
+					fore),
+					back
+				]));
+	});
+var timjs$elm_collage$Collage$Layout$bottom = function (col) {
+	var _n0 = timjs$elm_collage$Collage$Layout$distances(col);
+	var toBottom = _n0.toBottom;
+	return _Utils_Tuple2(0, -toBottom);
+};
+var timjs$elm_collage$Collage$Layout$left = function (col) {
+	var _n0 = timjs$elm_collage$Collage$Layout$distances(col);
+	var toLeft = _n0.toLeft;
+	return _Utils_Tuple2(-toLeft, 0);
+};
+var author$project$Main$snowdrifts = function (width) {
+	return A3(
+		timjs$elm_collage$Collage$Layout$at,
+		timjs$elm_collage$Collage$Layout$bottom,
+		A2(
+			timjs$elm_collage$Collage$Layout$align,
+			timjs$elm_collage$Collage$Layout$left,
+			A2(
+				timjs$elm_collage$Collage$filled,
+				timjs$elm_collage$Collage$uniform(the_sett$elm_color$Color$lightGrey),
+				A2(timjs$elm_collage$Collage$rectangle, width, 100))),
+		A2(
+			timjs$elm_collage$Collage$scaleX,
+			width / 1000,
+			timjs$elm_collage$Collage$group(
+				A2(
+					elm$core$List$indexedMap,
+					F2(
+						function (i, e) {
+							return A2(timjs$elm_collage$Collage$shiftX, i * 200, e);
+						}),
+					A2(
+						elm$core$List$map,
+						timjs$elm_collage$Collage$filled(
+							timjs$elm_collage$Collage$uniform(the_sett$elm_color$Color$lightGrey)),
+						_List_fromArray(
+							[
+								A2(timjs$elm_collage$Collage$ellipse, 150, 30),
+								A2(timjs$elm_collage$Collage$ellipse, 140, 50),
+								A2(timjs$elm_collage$Collage$ellipse, 200, 40),
+								A2(timjs$elm_collage$Collage$ellipse, 150, 50),
+								A2(timjs$elm_collage$Collage$ellipse, 150, 40),
+								A2(timjs$elm_collage$Collage$ellipse, 150, 30)
+							]))))));
+};
 var timjs$elm_collage$Collage$Core$Polyline = function (a) {
 	return {$: 'Polyline', a: a};
 };
@@ -7021,26 +7112,6 @@ var timjs$elm_collage$Collage$Core$Circle = function (a) {
 	return {$: 'Circle', a: a};
 };
 var timjs$elm_collage$Collage$circle = timjs$elm_collage$Collage$Core$Circle;
-var timjs$elm_collage$Collage$scaleXY = F2(
-	function (_n0, collage) {
-		var sx = _n0.a;
-		var sy = _n0.b;
-		var _n1 = collage.scale;
-		var sx0 = _n1.a;
-		var sy0 = _n1.b;
-		return _Utils_update(
-			collage,
-			{
-				scale: _Utils_Tuple2(sx0 * sx, sy0 * sy)
-			});
-	});
-var timjs$elm_collage$Collage$scaleX = F2(
-	function (s, collage) {
-		return A2(
-			timjs$elm_collage$Collage$scaleXY,
-			_Utils_Tuple2(s, 1),
-			collage);
-	});
 var elm$core$Basics$sqrt = _Basics_sqrt;
 var timjs$elm_collage$Collage$Core$Polygon = function (a) {
 	return {$: 'Polygon', a: a};
@@ -7057,18 +7128,6 @@ var timjs$elm_collage$Collage$triangle = function (b) {
 				_Utils_Tuple2(0, y)
 			]));
 };
-var timjs$elm_collage$Collage$Layout$at = F3(
-	function (anchor, fore, back) {
-		return timjs$elm_collage$Collage$Layout$stack(
-			_List_fromArray(
-				[
-					A2(
-					timjs$elm_collage$Collage$shift,
-					anchor(back),
-					fore),
-					back
-				]));
-	});
 var timjs$elm_collage$Collage$Layout$right = function (col) {
 	var _n0 = timjs$elm_collage$Collage$Layout$distances(col);
 	var toRight = _n0.toRight;
@@ -7109,65 +7168,47 @@ var author$project$Main$snowman = function (currentScore) {
 					whiteCircle(author$project$Main$headRadius * 2))
 				])));
 };
-var elm$virtual_dom$VirtualDom$node = function (tag) {
-	return _VirtualDom_node(
-		_VirtualDom_noScript(tag));
-};
-var elm$html$Html$node = elm$virtual_dom$VirtualDom$node;
-var elm$json$Json$Encode$string = _Json_wrap;
-var elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			elm$json$Json$Encode$string(string));
+var author$project$Pointer$Pointer = F2(
+	function (x, y) {
+		return {x: x, y: y};
 	});
-var elm$html$Html$Attributes$href = function (url) {
-	return A2(
-		elm$html$Html$Attributes$stringProperty,
-		'href',
-		_VirtualDom_noJavaScriptUri(url));
+var elm$json$Json$Decode$field = _Json_decodeField;
+var elm$json$Json$Decode$float = _Json_decodeFloat;
+var author$project$Pointer$pointerDecoder = A3(
+	elm$json$Json$Decode$map2,
+	author$project$Pointer$Pointer,
+	A2(elm$json$Json$Decode$field, 'x', elm$json$Json$Decode$float),
+	A2(elm$json$Json$Decode$field, 'y', elm$json$Json$Decode$float));
+var elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
 };
-var elm$html$Html$Attributes$rel = _VirtualDom_attribute('rel');
+var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			elm$virtual_dom$VirtualDom$on,
+			event,
+			elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var elm$json$Json$Decode$andThen = _Json_andThen;
+var author$project$Pointer$onPointerMove = function (msg) {
+	return A2(
+		elm$html$Html$Events$on,
+		'pointermove',
+		A2(
+			elm$json$Json$Decode$andThen,
+			A2(elm$core$Basics$composeL, elm$json$Json$Decode$succeed, msg),
+			author$project$Pointer$pointerDecoder));
+};
+var elm$html$Html$div = _VirtualDom_node('div');
+var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
 var timjs$elm_collage$Collage$scale = F2(
 	function (s, collage) {
 		return A2(
 			timjs$elm_collage$Collage$scaleXY,
 			_Utils_Tuple2(s, s),
 			collage);
-	});
-var elm$json$Json$Decode$field = _Json_decodeField;
-var elm$json$Json$Decode$float = _Json_decodeFloat;
-var timjs$elm_collage$Collage$Events$mouseOn = F2(
-	function (event, msg) {
-		return A2(
-			timjs$elm_collage$Collage$Events$on,
-			event,
-			A2(
-				elm$json$Json$Decode$map,
-				msg,
-				A3(
-					elm$json$Json$Decode$map2,
-					F2(
-						function (x, y) {
-							return _Utils_Tuple2(x, y);
-						}),
-					A2(elm$json$Json$Decode$field, 'clientX', elm$json$Json$Decode$float),
-					A2(elm$json$Json$Decode$field, 'clientY', elm$json$Json$Decode$float))));
-	});
-var timjs$elm_collage$Collage$Events$onMouseMove = timjs$elm_collage$Collage$Events$mouseOn('mousemove');
-var timjs$elm_collage$Collage$opposite = function (_n0) {
-	var x = _n0.a;
-	var y = _n0.b;
-	return _Utils_Tuple2(-x, -y);
-};
-var timjs$elm_collage$Collage$Layout$align = F2(
-	function (anchor, col) {
-		return A2(
-			timjs$elm_collage$Collage$shift,
-			timjs$elm_collage$Collage$opposite(
-				anchor(col)),
-			col);
 	});
 var timjs$elm_collage$Collage$Layout$base = function (col) {
 	var _n0 = timjs$elm_collage$Collage$Layout$distances(col);
@@ -7213,7 +7254,6 @@ var timjs$elm_collage$Collage$Layout$width = function (col) {
 	return toLeft + toRight;
 };
 var elm$core$String$fromFloat = _String_fromNumber;
-var elm$html$Html$div = _VirtualDom_node('div');
 var elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
 var elm$svg$Svg$svg = elm$svg$Svg$trustedNode('svg');
 var elm$svg$Svg$Attributes$height = _VirtualDom_attribute('height');
@@ -7538,17 +7578,6 @@ var timjs$elm_collage$Collage$Render$decodePoints = function (ps) {
 			},
 			ps));
 };
-var elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			elm$virtual_dom$VirtualDom$on,
-			event,
-			elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
 var elm$svg$Svg$Events$on = elm$html$Html$Events$on;
 var timjs$elm_collage$Helpers$uncurry = F2(
 	function (f, _n0) {
@@ -7798,61 +7827,66 @@ var timjs$elm_collage$Collage$Render$svg = function (collage) {
 var author$project$Main$view = function (model) {
 	return _List_fromArray(
 		[
-			A3(
-			elm$html$Html$node,
-			'link',
+			A2(
+			elm$html$Html$div,
 			_List_fromArray(
 				[
-					elm$html$Html$Attributes$rel('stylesheet'),
-					elm$html$Html$Attributes$href('https://fonts.googleapis.com/css?family=' + author$project$Config$config.font)
+					author$project$Pointer$onPointerMove(author$project$Main$PointerMove),
+					A2(elm$html$Html$Attributes$style, 'touch-action', 'none'),
+					A2(elm$html$Html$Attributes$style, 'position', 'fixed')
 				]),
-			_List_Nil),
-			timjs$elm_collage$Collage$Render$svg(
-			A2(
-				timjs$elm_collage$Collage$Events$onClick,
-				author$project$Main$StartGame,
-				A2(
-					timjs$elm_collage$Collage$Events$onMouseMove,
-					author$project$Main$MouseMove,
+			_List_fromArray(
+				[
+					timjs$elm_collage$Collage$Render$svg(
 					A2(
-						timjs$elm_collage$Collage$Layout$impose,
-						author$project$Main$snowdrifts,
+						timjs$elm_collage$Collage$Events$onClick,
+						author$project$Main$StartGame,
 						A2(
-							timjs$elm_collage$Collage$Layout$align,
-							timjs$elm_collage$Collage$Layout$bottomLeft,
+							timjs$elm_collage$Collage$Layout$impose,
 							A2(
-								timjs$elm_collage$Collage$Layout$impose,
+								timjs$elm_collage$Collage$shiftY,
+								100,
+								author$project$Main$snowdrifts(model.sceneWidth)),
+							A2(
+								timjs$elm_collage$Collage$Layout$align,
+								timjs$elm_collage$Collage$Layout$bottomLeft,
 								A2(
-									timjs$elm_collage$Collage$scale,
-									0.5,
+									timjs$elm_collage$Collage$Layout$impose,
 									A2(
-										timjs$elm_collage$Collage$shiftX,
-										model.playerX,
+										timjs$elm_collage$Collage$scale,
+										0.5,
 										A2(
-											timjs$elm_collage$Collage$shiftY,
-											60,
-											author$project$Main$snowman(model.score)))),
-								A2(
-									timjs$elm_collage$Collage$Layout$align,
-									timjs$elm_collage$Collage$Layout$bottomLeft,
-									A3(
-										timjs$elm_collage$Collage$Layout$at,
-										timjs$elm_collage$Collage$Layout$topLeft,
-										A2(
-											timjs$elm_collage$Collage$shift,
-											_Utils_Tuple2(50, -50),
-											author$project$Main$score(model)),
+											timjs$elm_collage$Collage$shiftX,
+											model.playerX,
+											A2(
+												timjs$elm_collage$Collage$shiftY,
+												160,
+												author$project$Main$snowman(model.score)))),
+									A2(
+										timjs$elm_collage$Collage$Layout$align,
+										timjs$elm_collage$Collage$Layout$bottomLeft,
 										A3(
 											timjs$elm_collage$Collage$Layout$at,
-											timjs$elm_collage$Collage$Layout$base,
-											author$project$Main$message(model),
+											timjs$elm_collage$Collage$Layout$topLeft,
 											A2(
-												timjs$elm_collage$Collage$Layout$align,
+												timjs$elm_collage$Collage$shift,
+												_Utils_Tuple2(50, -50),
+												author$project$Main$score(model)),
+											A3(
+												timjs$elm_collage$Collage$Layout$at,
 												timjs$elm_collage$Collage$Layout$base,
+												author$project$Main$message(model),
 												A2(
-													timjs$elm_collage$Collage$Layout$impose,
-													author$project$Main$snowflakes(model),
-													A2(timjs$elm_collage$Collage$Layout$align, timjs$elm_collage$Collage$Layout$topLeft, author$project$Main$background))))))))))))
+													timjs$elm_collage$Collage$Layout$align,
+													timjs$elm_collage$Collage$Layout$base,
+													A2(
+														timjs$elm_collage$Collage$Layout$impose,
+														author$project$Main$snowflakes(model),
+														A2(
+															timjs$elm_collage$Collage$Layout$align,
+															timjs$elm_collage$Collage$Layout$topLeft,
+															A2(author$project$Main$background, model.sceneWidth, model.sceneHeight))))))))))))
+				]))
 		]);
 };
 var elm$browser$Browser$document = _Browser_document;
