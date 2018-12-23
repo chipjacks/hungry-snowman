@@ -151,8 +151,7 @@ isFlakeCaught model flakePosition =
 
 view : Model -> List (Html Msg)
 view model =
-    [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href ("https://fonts.googleapis.com/css?family=" ++ config.font)] []
-    , Html.div
+    [ Html.div
         [ onPointerMove PointerMove
         , Html.Attributes.style "touch-action" "none"
         , Html.Attributes.style "position" "fixed"
