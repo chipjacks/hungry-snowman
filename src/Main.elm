@@ -161,6 +161,7 @@ view model =
         [ onPointerMove PointerMove
         , Html.Attributes.style "touch-action" "none"
         , Html.Attributes.style "position" "fixed"
+        , Html.Attributes.style "-webkit-user-select" "none"
         ]
         [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft (background model.sceneWidth model.sceneHeight))
             |> Layout.align Layout.base
