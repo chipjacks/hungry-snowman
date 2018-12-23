@@ -1,8 +1,10 @@
 import Browser
 import Browser.Events
+import Browser.Dom exposing (getViewport, Viewport)
 import Html exposing (Html)
 import Html.Attributes
 import Time exposing (Posix)
+import Task
 import Random
 
 import Collage exposing (..)
@@ -36,10 +38,11 @@ model0 =
         0
         Nothing
         Unstarted
+        1000
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  (model0, Cmd.none)
+  (model0, Task.perform GotViewport getViewport)
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -59,6 +62,7 @@ type alias Model =
   , score : Int
   , totalFlakes : Maybe Int
   , state : GameState
+  , sceneHeight : Float
   }
 
 type Msg
@@ -66,6 +70,7 @@ type Msg
     | NewRandom (Float, Float)
     | NewSnowflake Posix
     | PointerMove Pointer
+    | GotViewport Viewport
     | StartGame
 
 type GameState
@@ -102,7 +107,7 @@ update msg model =
 
         NewSnowflake clock ->
             let
-                position = Snowflake.initPosition model.clock model.randomness
+                position = Snowflake.initPosition model.clock model.randomness model.sceneHeight
             in
                ({ model | snowflakePositions = position :: (List.take config.maxSnowflakes model.snowflakePositions) }
                , Random.generate NewRandom (Random.pair (Random.float 0 1) (Random.float 0 1))
@@ -115,6 +120,9 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+        GotViewport viewport ->
+           ( { model | sceneHeight = viewport.scene.height }, Cmd.none )
 
         StartGame ->
             case model.state of
@@ -132,7 +140,7 @@ isFlakeCaught : Model -> Snowflake.Position -> Bool
 isFlakeCaught model flakePosition =
     let
         tongueX = model.playerX
-        tongueY = -850
+        tongueY = 0 - model.sceneHeight + snowmanHeight
         position = Snowflake.animatePosition model.clock flakePosition
         withinDistance a b = compare (abs (a - b)) headRadius == LT
     in
@@ -149,19 +157,19 @@ view model =
         , Html.Attributes.style "touch-action" "none"
         , Html.Attributes.style "position" "fixed"
         ]
-        [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft background)
+        [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft (background model.sceneHeight))
             |> Layout.align Layout.base
             |> Layout.at Layout.base (message model)
             |> Layout.at Layout.topLeft (score model |> shift (50, -50))
-            |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 60 |> shiftX model.playerX |> scale 0.5)
-            |> Layout.align Layout.bottomLeft |> Layout.impose snowdrifts
+            |> Layout.align Layout.bottomLeft |> Layout.impose (snowman model.score |> shiftY 160 |> shiftX model.playerX |> scale 0.5)
+            |> Layout.align Layout.bottomLeft |> Layout.impose (snowdrifts |> shiftY 100)
             |> Events.onClick StartGame
             |> svg
         ]
     ]
 
-background =
-    rectangle config.sceneWidth config.sceneHeight
+background height =
+    rectangle config.sceneWidth height
         |> filled (uniform Color.lightBlue)
 
 snowflakes : Model -> Collage msg
@@ -183,6 +191,11 @@ snowdrifts =
     |> List.map (filled (uniform Color.lightGrey))
     |> List.indexedMap (\i e -> shiftX ((toFloat i) * 200) e)
     |> group
+    |> Layout.at Layout.bottom
+        ( rectangle config.sceneWidth 100
+            |> (filled (uniform Color.lightGrey))
+            |> (Layout.align Layout.left)
+        )
 
 
 customStyle =
@@ -272,6 +285,9 @@ headRadius : Float
 headRadius =
     30
 
+snowmanHeight : Float
+snowmanHeight =
+    250
 
 snowman : Int -> Collage msg
 snowman currentScore =
