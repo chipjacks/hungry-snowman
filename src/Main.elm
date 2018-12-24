@@ -2,7 +2,7 @@ import Browser
 import Browser.Events
 import Browser.Dom exposing (getViewport, Viewport)
 import Html exposing (Html)
-import Html.Attributes
+import Html.Attributes exposing (style, class)
 import Time exposing (Posix)
 import Task
 import Random
@@ -159,9 +159,9 @@ view : Model -> List (Html Msg)
 view model =
     [ Html.div
         [ onPointerMove PointerMove
-        , Html.Attributes.style "touch-action" "none"
-        , Html.Attributes.style "position" "fixed"
-        , Html.Attributes.style "-webkit-user-select" "none"
+        , style "touch-action" "none"
+        , style "position" "fixed"
+        , style "-webkit-user-select" "none"
         ]
         [ Layout.impose (snowflakes model) (Layout.align Layout.topLeft (background model.sceneWidth model.sceneHeight))
             |> Layout.align Layout.base
@@ -264,19 +264,13 @@ score : Model -> Collage Msg
 score model =
     case model.state of
         Playing startTime ->
-            [Text.fromString "⌛︎"
-                |> customStyle
-                |> Text.size 50
-                |> rendered
+            [ Collage.html ( 50, 70 ) (Html.span [ class "fas fa-stopwatch", style "color" "white", style "font-size" "35px" ] [])
             ,Text.fromString ((String.fromInt <| round <| (config.gameLengthSeconds - (model.clock - startTime) / 1000) ))
                 |> customStyle
                 |> Text.size 50
                 |> rendered
             , Layout.spacer 40 0
-            , Text.fromString "❄"
-                |> customStyle
-                |> Text.size 50
-                |> rendered
+            , Collage.html ( 30, 70 ) (Html.span [ class "fas fa-snowflake", style "color" "white", style "font-size" "35px" ] [])
             , Layout.spacer 15 0
             , Text.fromString (String.fromInt model.score)
                 |> customStyle
@@ -305,10 +299,10 @@ snowman currentScore =
             |> rotate (degrees 30)
             |> scaleX 3
     in
-    [ whiteCircle 90
-    , whiteCircle 75
-    , whiteCircle (headRadius * 2)
-        |> Layout.at Layout.right (nose |> shiftX 10)
-    ]
-    |> List.indexedMap (\i e -> shiftY ((toFloat i) * 90) e)
-    |> group
+        [ whiteCircle 90
+        , whiteCircle 75
+        , whiteCircle (headRadius * 2)
+            |> Layout.at Layout.right (nose |> shiftX 10)
+        ]
+        |> List.indexedMap (\i e -> shiftY ((toFloat i) * 90) e)
+        |> group
