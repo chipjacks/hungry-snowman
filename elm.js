@@ -6883,6 +6883,28 @@ var author$project$Main$message = function (model) {
 	}
 };
 var elm$core$Basics$round = _Basics_round;
+var elm$html$Html$span = _VirtualDom_node('span');
+var elm$json$Json$Encode$string = _Json_wrap;
+var elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			elm$json$Json$Encode$string(string));
+	});
+var elm$html$Html$Attributes$class = elm$html$Html$Attributes$stringProperty('className');
+var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
+var timjs$elm_collage$Collage$Core$Html = F2(
+	function (a, b) {
+		return {$: 'Html', a: a, b: b};
+	});
+var timjs$elm_collage$Collage$html = function (dims) {
+	return A2(
+		elm$core$Basics$composeL,
+		timjs$elm_collage$Collage$Core$collage,
+		timjs$elm_collage$Collage$Core$Html(dims));
+};
 var timjs$elm_collage$Collage$Layout$horizontal = A2(
 	elm$core$List$foldr,
 	timjs$elm_collage$Collage$Layout$beside(timjs$elm_collage$Collage$Layout$Right),
@@ -6894,12 +6916,18 @@ var author$project$Main$score = function (model) {
 		return timjs$elm_collage$Collage$Layout$horizontal(
 			_List_fromArray(
 				[
-					timjs$elm_collage$Collage$rendered(
 					A2(
-						timjs$elm_collage$Collage$Text$size,
-						50,
-						author$project$Main$customStyle(
-							timjs$elm_collage$Collage$Text$fromString('⌛︎')))),
+					timjs$elm_collage$Collage$html,
+					_Utils_Tuple2(50, 70),
+					A2(
+						elm$html$Html$span,
+						_List_fromArray(
+							[
+								elm$html$Html$Attributes$class('fas fa-stopwatch'),
+								A2(elm$html$Html$Attributes$style, 'color', 'white'),
+								A2(elm$html$Html$Attributes$style, 'font-size', '35px')
+							]),
+						_List_Nil)),
 					timjs$elm_collage$Collage$rendered(
 					A2(
 						timjs$elm_collage$Collage$Text$size,
@@ -6909,12 +6937,18 @@ var author$project$Main$score = function (model) {
 								elm$core$String$fromInt(
 									elm$core$Basics$round(author$project$Config$config.gameLengthSeconds - ((model.clock - startTime) / 1000))))))),
 					A2(timjs$elm_collage$Collage$Layout$spacer, 40, 0),
-					timjs$elm_collage$Collage$rendered(
 					A2(
-						timjs$elm_collage$Collage$Text$size,
-						50,
-						author$project$Main$customStyle(
-							timjs$elm_collage$Collage$Text$fromString('❄')))),
+					timjs$elm_collage$Collage$html,
+					_Utils_Tuple2(30, 70),
+					A2(
+						elm$html$Html$span,
+						_List_fromArray(
+							[
+								elm$html$Html$Attributes$class('fas fa-snowflake'),
+								A2(elm$html$Html$Attributes$style, 'color', 'white'),
+								A2(elm$html$Html$Attributes$style, 'font-size', '35px')
+							]),
+						_List_Nil)),
 					A2(timjs$elm_collage$Collage$Layout$spacer, 15, 0),
 					timjs$elm_collage$Collage$rendered(
 					A2(
@@ -7201,8 +7235,6 @@ var author$project$Pointer$onPointerMove = function (msg) {
 			author$project$Pointer$pointerDecoder));
 };
 var elm$html$Html$div = _VirtualDom_node('div');
-var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
 var timjs$elm_collage$Collage$scale = F2(
 	function (s, collage) {
 		return A2(
